@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repolearn.dev/schemas/repository.v1.json",
+  "title": "repolearn.repository.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "repository", "learning", "authority", "privacy"],
+  "properties": {
+    "schema": {"const": "repolearn.repository.v1"},
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "default_branch": {"type": ["string", "null"]},
+        "workspace_boundary": {"type": ["string", "null"]}
+      }
+    },
+    "learning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "default_mode"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "default_mode": {"enum": ["observe", "guided", "practice"]}
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {"source": {"type": "string", "minLength": 1}}
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["allow_source_excerpt_writeback"],
+      "properties": {
+        "allow_source_excerpt_writeback": {"type": "boolean", "default": false},
+        "allow_private_repository_identifier_writeback": {"type": "boolean", "default": false}
+      }
+    }
+  }
+}

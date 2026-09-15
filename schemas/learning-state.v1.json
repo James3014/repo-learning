@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repolearn.dev/schemas/learning-state.v1.json",
+  "title": "repolearn.learning_state.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile_id", "updated_at", "domains", "source"],
+  "properties": {
+    "schema": {"const": "repolearn.learning_state.v1"},
+    "profile_id": {"type": "string", "minLength": 1},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "domains": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "evidence_count"],
+        "properties": {
+          "level": {"enum": ["UNASSESSED", "L0", "L1", "L2", "L3", "L4"]},
+          "evidence_count": {"type": "integer", "minimum": 0},
+          "last_event_id": {"type": ["string", "null"]},
+          "last_observed_at": {"type": ["string", "null"], "format": "date-time"}
+        }
+      }
+    },
+    "review_queue": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["concept", "prefer_natural_case"],
+        "properties": {
+          "concept": {"type": "string", "minLength": 1},
+          "prefer_natural_case": {"type": "boolean"},
+          "earliest_after": {"type": ["string", "null"], "format": "date-time"}
+        }
+      },
+      "default": []
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["backend"],
+      "properties": {
+        "backend": {"type": "string", "minLength": 1},
+        "revision": {"type": ["string", "null"]},
+        "content_hash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repolearn.dev/schemas/learning-event.v1.json",
+  "title": "repolearn.learning_event.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "event_id", "observed_at", "profile_id", "context", "capability", "attempt", "assessment"],
+  "properties": {
+    "schema": {"const": "repolearn.learning_event.v1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "observed_at": {"type": "string", "format": "date-time"},
+    "profile_id": {"type": "string", "minLength": 1},
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository"],
+      "properties": {
+        "repository": {"type": "string", "minLength": 1},
+        "revision": {"type": ["string", "null"]},
+        "task_ref": {"type": ["string", "null"]},
+        "workspace_boundary": {"type": ["string", "null"]}
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "concept"],
+      "properties": {
+        "domain": {"type": "string", "minLength": 1},
+        "concept": {"type": "string", "minLength": 1}
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cue_level", "transfer_distance", "judgment"],
+      "properties": {
+        "judgment": {"type": "string"},
+        "cue_level": {"enum": ["NONE", "LIGHT", "HEAVY"]},
+        "transfer_distance": {"enum": ["SAME_STRUCTURE", "NEAR_TRANSFER", "FAR_TRANSFER"]},
+        "delay": {"type": ["string", "null"]},
+        "user_attempted": {"type": "boolean", "default": true},
+        "ai_explanation_only": {"type": "boolean", "default": false}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "goals": {"type": "array", "items": {"type": "string"}},
+        "constraints": {"type": "array", "items": {"type": "string"}},
+        "alternatives": {"type": "array", "items": {"type": "string"}},
+        "trade_offs": {"type": "array", "items": {"type": "string"}},
+        "inspected": {"type": "array", "items": {"type": "string"}},
+        "falsifier": {"type": ["string", "null"]}
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["classification", "recommended_level", "rationale"],
+      "properties": {
+        "classification": {"type": "string", "minLength": 1},
+        "recommended_level": {"enum": ["UNASSESSED", "L0", "L1", "L2", "L3", "L4"]},
+        "rationale": {"type": "string"},
+        "mastery_effect": {"type": "string", "default": "EVIDENCE_ONLY"}
+      }
+    },
+    "learning": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reusable_principle": {"type": ["string", "null"]},
+        "applicability_boundary": {"type": ["string", "null"]},
+        "next_challenge": {"type": ["string", "null"]}
+      }
+    }
+  }
+}
