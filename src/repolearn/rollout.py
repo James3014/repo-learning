@@ -19,6 +19,9 @@ EXPECTED_REPOSITORIES = (
     "James3014/nexus-opencli-reviewer",
 )
 
+CANONICAL_SKILL_SOURCE = "James3014/repo-learning:skills/repo-learning/"
+REPOSITORY_ACTIVATION_ADAPTER = "repo-instruction-pointer"
+
 _FORBIDDEN_KEY_TOKENS = ("mastery", "state", "policy", "governance")
 _ALLOWED_TOP_LEVEL = {"schema", "repositories"}
 _ALLOWED_REPOSITORY_FIELDS = {
@@ -28,6 +31,9 @@ _ALLOWED_REPOSITORY_FIELDS = {
     "clients",
     "privacy",
     "context_adapter",
+    "activation_required",
+    "activation_adapter",
+    "canonical_skill_source",
 }
 _ALLOWED_PRIVACY_FIELDS = {
     "persist_source_excerpts",
@@ -95,6 +101,12 @@ def validate_rollout_manifest(manifest: Mapping[str, Any]) -> None:
             raise RolloutManifestError("client projection must remain the approved Codex/Claude pair")
         if entry.get("context_adapter") != "thin-reference-only":
             raise RolloutManifestError("context adapter must remain thin-reference-only")
+        if entry.get("activation_required") is not True:
+            raise RolloutManifestError("repository activation pointer must be required")
+        if entry.get("activation_adapter") != REPOSITORY_ACTIVATION_ADAPTER:
+            raise RolloutManifestError("activation adapter must remain repo-instruction-pointer")
+        if entry.get("canonical_skill_source") != CANONICAL_SKILL_SOURCE:
+            raise RolloutManifestError("canonical skill source must remain the repo-learning Skill source")
         privacy = entry.get("privacy")
         if not isinstance(privacy, dict):
             raise RolloutManifestError("privacy metadata must be an object")
