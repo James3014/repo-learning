@@ -11,9 +11,13 @@ Default to low interruption. A proactive learning interaction is eligible only w
 - the task is not mechanical, urgent or exact-machine-output;
 - the concept is not being repeated without a materially harder variant.
 
+For an **explicit RepoLearn invocation**, treat the user's request to use RepoLearn as acceptance of one low-cost interruption. If the task contains a meaningful architecture trade-off or any trigger class named in the Skill description, and no hard suppressor applies, classify it as `LEARNING_OPPORTUNITY`. Do not use the general low-interruption preference as a reason to choose `NO_TRIGGER` on this explicit-invocation path. This positive-control rule also applies when bounded state is `UNASSESSED`.
+
+Hard suppressors for the explicit-invocation path are limited to: `observe` mode, mechanical work, urgent work where interruption would materially harm the task, exact-machine-output, decisive evidence already revealed before RepoLearn selection, or current bounded learning evidence that explicitly supports silent cue fading for this concept. Chat memory by itself is not sufficient evidence for cue-fading suppression.
+
 A missing profile/state is `UNASSESSED`, not evidence of mastery and not a reason by itself to suppress a qualifying prompt. A configured backend that is unavailable, stale, conflicting, or reassessment-required follows the state contract and degrades visible learning to normal engineering.
 
-Many tasks should produce zero learning prompts. Decide `NO_TRIGGER` versus `LEARNING_OPPORTUNITY` before deep learning-only investigation and before substantive recommendation/conclusion. A no-trigger result stops learning-only research; when triggered, any additional learning research is bounded to the single selected concept.
+For automatic Skill selection, decide `NO_TRIGGER` versus `LEARNING_OPPORTUNITY` before deep learning-only investigation and before substantive recommendation/conclusion. A no-trigger result stops learning-only research; when triggered, any additional learning research is bounded to the single selected concept.
 
 For `guided`, enforce a hard two-branch contract:
 
