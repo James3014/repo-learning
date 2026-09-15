@@ -1,4 +1,4 @@
-"""RepoLearn generic learning contracts."""
+"""RepoLearn portable human-learning contracts."""
 
 from .assessment import (
     AssessmentClassification,
@@ -9,6 +9,14 @@ from .assessment import (
     TransferDistance,
     assess_judgment,
 )
+from .backends import (
+    BackendConflictError,
+    LocalFileBackend,
+    NexusLedgerBackend,
+    ReadOnlyCanonicalBackendError,
+    StaleProjectionError,
+)
+from .client import ClientLearningDecision, prepare_learning_decision
 from .state import StateBackend, StateUnavailableError
 from .triggers import (
     InteractionMode,
@@ -22,11 +30,17 @@ from .triggers import (
 __all__ = [
     "AssessmentClassification",
     "AssessmentResult",
+    "BackendConflictError",
+    "ClientLearningDecision",
     "CueLevel",
     "InteractionMode",
     "JudgmentEvidence",
     "LearningOpportunity",
+    "LocalFileBackend",
     "MasteryLevel",
+    "NexusLedgerBackend",
+    "ReadOnlyCanonicalBackendError",
+    "StaleProjectionError",
     "StateBackend",
     "StateUnavailableError",
     "TaskContext",
@@ -34,5 +48,6 @@ __all__ = [
     "TriggerDisposition",
     "TriggerResult",
     "assess_judgment",
+    "prepare_learning_decision",
     "select_learning_opportunity",
 ]
