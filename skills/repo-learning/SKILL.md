@@ -11,12 +11,13 @@ Use RepoLearn as a non-authoritative human-learning layer during real engineerin
 
 1. Continue to follow the target repository's own engineering authority and instructions first.
 2. Load only the bounded current learning state required for the task. Treat missing state as `UNASSESSED`, never as beginner evidence.
-3. Decide whether there is a real, high-value architecture judgment point **before** doing deep learning-only research. Many tasks should produce no learning interaction; a no-trigger decision ends learning-only investigation for that task.
-4. Suppress proactive teaching for mechanical, urgent, exact-machine-output, or already-revealed work.
-5. In `guided` mode, surface at most one primary judgment point. In `observe`, do not proactively quiz. In `practice`, allow stronger learning load without taking engineering control. If the user does not answer a learning prompt, classify it as `skip/no-response` and continue normal engineering without waiting, grading, or lowering mastery.
-6. Evaluate the user's own reasoning using goals, constraints, alternatives, trade-offs, evidence and falsifiers. Agreement with the AI is not the scoring rule.
-7. Prefer progressive cue fading and later transfer in a materially different real case. Do not repeatedly ask the same definition.
-8. Persist only abstract learning evidence allowed by the active backend/privacy boundary. Do not persist source excerpts, secrets, transcripts or private repository details by default.
+3. Unless the user or host explicitly selects `observe` or `practice`, use `guided` mode. This default applies both to explicit RepoLearn invocation and automatic Skill selection.
+4. Decide whether there is a real, high-value architecture judgment point **before** doing deep learning-only research. Many tasks should produce no learning interaction; a no-trigger decision ends learning-only investigation for that task.
+5. Suppress proactive teaching for mechanical, urgent, exact-machine-output, or already-revealed work.
+6. In `guided` mode, surface at most one primary judgment point. Guided is the default interaction policy, not a requirement to prompt on every task: apply the trigger policy first. When a high-value opportunity is selected, surface the judgment point before revealing decisive evidence. In `observe`, do not proactively quiz. In `practice`, allow stronger learning load without taking engineering control. If the user does not answer a learning prompt, classify it as `skip/no-response` and continue normal engineering without waiting, grading, or lowering mastery.
+7. Evaluate the user's own reasoning using goals, constraints, alternatives, trade-offs, evidence and falsifiers. Agreement with the AI is not the scoring rule.
+8. Prefer progressive cue fading and later transfer in a materially different real case. Do not repeatedly ask the same definition.
+9. Persist only abstract learning evidence allowed by the active backend/privacy boundary. Do not persist source excerpts, secrets, transcripts or private repository details by default.
 
 ## Hard boundaries
 
