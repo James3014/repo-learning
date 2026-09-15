@@ -2,6 +2,7 @@ from pathlib import Path
 
 SKILL = Path("skills/repo-learning/SKILL.md").read_text()
 POLICY = Path("skills/repo-learning/references/policy.md").read_text()
+STATE = Path("skills/repo-learning/references/state-contract.md").read_text()
 
 
 def test_unspecified_mode_defaults_to_guided_for_manual_and_auto_selection():
@@ -11,7 +12,23 @@ def test_unspecified_mode_defaults_to_guided_for_manual_and_auto_selection():
     assert "automatic Skill selection" in POLICY
 
 
-def test_default_guided_still_preserves_low_interruption_and_pre_evidence_prompting():
-    assert "Guided is the default interaction policy, not a requirement to prompt on every task" in SKILL
-    assert "surface the judgment point before revealing decisive evidence" in SKILL
-    assert "Guided does not require a visible prompt on every task; apply the trigger policy first." in POLICY
+def test_selected_guided_opportunity_requires_exactly_one_prompt_before_solution():
+    assert "enforce this hard two-branch contract" in SKILL
+    assert "MUST surface exactly one concise primary architecture judgment prompt" in SKILL
+    assert "MUST NOT be converted into explanation-only output" in SKILL
+    assert "before any substantive recommendation, conclusion, or decisive evidence" in POLICY
+    assert "MUST emit exactly one concise primary judgment prompt" in POLICY
+
+
+def test_no_trigger_remains_silent_and_nonblocking():
+    assert "`NO_TRIGGER`: emit no learning prompt and continue normal engineering." in SKILL
+    assert "`NO_TRIGGER`: emit no learning prompt and continue normal engineering." in POLICY
+    assert "continue normal engineering without waiting" in SKILL
+
+
+def test_missing_state_is_unassessed_not_mastery_or_backend_failure():
+    assert "Treat a missing profile/state as `UNASSESSED`" in SKILL
+    assert "not evidence of mastery" in POLICY
+    assert "A missing profile/state from an otherwise available backend is `UNASSESSED`." in STATE
+    assert "does not by itself suppress an otherwise qualifying guided interaction" in STATE
+    assert "Do not claim silent cue-fading suppression from chat memory alone" in POLICY

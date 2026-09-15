@@ -20,4 +20,6 @@ A later migration requires explicit transaction evidence: source revision/hash, 
 
 ## Client behavior
 
-State loading is bounded and best-effort. Backend unavailability or a stale projection must degrade to normal engineering. This fail-open interaction behavior does not weaken migration safety: ownership/cutover preflight still fails closed on stale or conflicting evidence. Learning state must never lower mastery, alter target-repository authority, or block repository work.
+A missing profile/state from an otherwise available backend is `UNASSESSED`. It is not backend failure, does not imply beginner status or mastery, and does not by itself suppress an otherwise qualifying guided interaction.
+
+State loading is bounded and best-effort. A configured backend that is unavailable, a stale projection, conflicting evidence, or reassessment-required state must degrade visible learning to normal engineering. This fail-open interaction behavior does not weaken migration safety: ownership/cutover preflight still fails closed on stale or conflicting evidence. Learning state must never lower mastery, alter target-repository authority, or block repository work.
