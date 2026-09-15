@@ -11,7 +11,10 @@
         "persist_transcripts": false,
         "persist_personal_state_in_repository": false
       },
-      "context_adapter": "thin-reference-only"
+      "context_adapter": "thin-reference-only",
+      "activation_required": true,
+      "activation_adapter": "repo-instruction-pointer",
+      "canonical_skill_source": "James3014/repo-learning:skills/repo-learning/"
     },
     {
       "repository": "James3014/devspace",
@@ -23,7 +26,10 @@
         "persist_transcripts": false,
         "persist_personal_state_in_repository": false
       },
-      "context_adapter": "thin-reference-only"
+      "context_adapter": "thin-reference-only",
+      "activation_required": true,
+      "activation_adapter": "repo-instruction-pointer",
+      "canonical_skill_source": "James3014/repo-learning:skills/repo-learning/"
     },
     {
       "repository": "James3014/nexus-core",
@@ -35,7 +41,10 @@
         "persist_transcripts": false,
         "persist_personal_state_in_repository": false
       },
-      "context_adapter": "thin-reference-only"
+      "context_adapter": "thin-reference-only",
+      "activation_required": true,
+      "activation_adapter": "repo-instruction-pointer",
+      "canonical_skill_source": "James3014/repo-learning:skills/repo-learning/"
     },
     {
       "repository": "James3014/nexus-learning",
@@ -47,7 +56,10 @@
         "persist_transcripts": false,
         "persist_personal_state_in_repository": false
       },
-      "context_adapter": "thin-reference-only"
+      "context_adapter": "thin-reference-only",
+      "activation_required": true,
+      "activation_adapter": "repo-instruction-pointer",
+      "canonical_skill_source": "James3014/repo-learning:skills/repo-learning/"
     },
     {
       "repository": "James3014/nexus-open-swe-runtime",
@@ -59,7 +71,10 @@
         "persist_transcripts": false,
         "persist_personal_state_in_repository": false
       },
-      "context_adapter": "thin-reference-only"
+      "context_adapter": "thin-reference-only",
+      "activation_required": true,
+      "activation_adapter": "repo-instruction-pointer",
+      "canonical_skill_source": "James3014/repo-learning:skills/repo-learning/"
     },
     {
       "repository": "James3014/repository-intelligence-engine",
@@ -71,7 +86,10 @@
         "persist_transcripts": false,
         "persist_personal_state_in_repository": false
       },
-      "context_adapter": "thin-reference-only"
+      "context_adapter": "thin-reference-only",
+      "activation_required": true,
+      "activation_adapter": "repo-instruction-pointer",
+      "canonical_skill_source": "James3014/repo-learning:skills/repo-learning/"
     },
     {
       "repository": "James3014/nexus-runtime",
@@ -83,7 +101,10 @@
         "persist_transcripts": false,
         "persist_personal_state_in_repository": false
       },
-      "context_adapter": "thin-reference-only"
+      "context_adapter": "thin-reference-only",
+      "activation_required": true,
+      "activation_adapter": "repo-instruction-pointer",
+      "canonical_skill_source": "James3014/repo-learning:skills/repo-learning/"
     },
     {
       "repository": "James3014/nexus-opencli-reviewer",
@@ -95,7 +116,10 @@
         "persist_transcripts": false,
         "persist_personal_state_in_repository": false
       },
-      "context_adapter": "thin-reference-only"
+      "context_adapter": "thin-reference-only",
+      "activation_required": true,
+      "activation_adapter": "repo-instruction-pointer",
+      "canonical_skill_source": "James3014/repo-learning:skills/repo-learning/"
     }
   ]
 }

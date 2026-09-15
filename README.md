@@ -10,9 +10,13 @@ RepoLearn separates three concerns:
 
 1. **Public core** — generic learning schemas, trigger rules, assessment contracts, adapters, and evaluation methods.
 2. **Private user learning state** — mastery evidence, learning events, review queue, and preferences owned by the user through a state backend.
-3. **Thin repository context** — repository identity, authority-source reference, learning mode, and privacy settings. Repository context never stores user mastery.
+3. **Thin repository context** — repository identity, authority-source reference, RepoLearn activation, learning mode, and privacy settings. Repository context never stores user mastery or clones RepoLearn policy.
 
-The first portable client direction is Agent Skills with client-specific installation projections. Skill installation, skill activation, state loading, and actual learning are separate facts.
+For a repository that has explicitly enrolled in RepoLearn, the repository's own loaded instruction surface is the primary activation signal. It should contain only a thin pointer to the canonical RepoLearn capability. Agent Skill auto-discovery remains useful as a convenience/fallback for general conversations, but it is not the control plane for repository enrollment and is not sufficient evidence that repository activation occurred.
+
+The first portable client direction is Agent Skills with client-specific installation projections. Repository enrollment, repository-instruction loading, skill installation, skill loading, state loading, and actual learning are separate facts.
+
+See `docs/REPOSITORY_ACTIVATION_V1.md` for the canonical repository-activation contract.
 
 ## G1 generic contracts
 
@@ -36,6 +40,7 @@ Key invariants:
 - Mechanical, urgent, exact-machine-output, or already-revealed work can remain silent.
 - Client-native memory is not canonical mastery storage.
 - Learning state never changes engineering authority.
+- Repository activation never creates a second copy of RepoLearn policy.
 
 ## Portable runtime: G2 + G3 + G4
 
@@ -44,6 +49,7 @@ The portable-runtime layer adds:
 - one canonical Agent Skills source at `skills/repo-learning/`;
 - client-specific Codex and Claude Code installation projections without policy forks;
 - a client-neutral state/trigger preparation contract that degrades to normal engineering when learning state is unavailable;
+- a repository-activation contract where enrolled repos use a thin local instruction pointer and automatic Skill discovery remains convenience only;
 - `LocalFileBackend` for private local JSONL events plus deterministic JSON projection, with stable event idempotency, conflict detection, stale-projection detection and owner-only file permissions;
 - `NexusLedgerBackend` as a hash/revision-bound **read-through** adapter for James's existing Nexus Owner-learning Ledger.
 
@@ -55,8 +61,8 @@ The following remain later gates: real multi-day Nexus-new/devspace dogfood, 8-r
 
 The repository also contains bounded preparation work for later gates without claiming those gates complete:
 
-- **G5 hardening** — stale/unavailable learning state fails open to engineering; trigger/no-trigger is decided before deep learning-only research; an unanswered learning prompt is `skip/no-response`, never a blocker or negative mastery signal.
-- **G6-PREP** — `manifests/g6-rollout.v1.json` plus validation/dry-run code describes only thin context for the exact eight approved Nexus repositories. It performs no installation and stores no personal mastery or copied repository governance.
+- **G5 hardening** — stale/unavailable learning state fails open to engineering; trigger/no-trigger is decided before deep learning-only research; an unanswered learning prompt is `skip/no-response`, never a blocker or negative mastery signal. For the two dogfood repositories, correctness should rely on repo-local activation rather than hoping Skill auto-discovery fires.
+- **G6-PREP** — `manifests/g6-rollout.v1.json` plus validation/dry-run code describes only thin context and a required repo-instruction activation pointer for the exact eight approved Nexus repositories. It performs no installation and stores no personal mastery or copied repository governance/learning policy.
 - **G7-PREP** — migration preflight binds source/destination hashes, readback, event counts, projection equivalence and rollback evidence while preserving one writable SSOT. Contradictory assessed levels require reassessment rather than highest/latest-wins reduction. No James state is migrated by these primitives.
 - **G8-PREP** — local profile export/delete/reset and privacy-readiness checks prepare user data controls. They do not enroll a Friend Alpha participant.
 - **G9-PREP** — descriptive aggregation covers interruption/skip rates, interaction cost, cue reduction and delayed materially-different transfer. These metrics are explicitly not causal proof of learning effectiveness.
