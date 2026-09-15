@@ -28,6 +28,7 @@ class TaskContext:
     urgent: bool = False
     exact_machine_output: bool = False
     decisive_evidence_already_revealed: bool = False
+    deep_learning_research_would_be_required: bool = False
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,23 @@ class TriggerResult:
             raise ValueError("NO_TRIGGER cannot carry a learning opportunity")
         if self.disposition is TriggerDisposition.LEARNING_OPPORTUNITY and len(self.opportunities) != 1:
             raise ValueError("LEARNING_OPPORTUNITY must carry exactly one concept")
+
+    @property
+    def learning_research_allowed(self) -> bool:
+        """Whether learning-only research may proceed after the trigger decision.
+
+        Trigger selection is deliberately cheaper than any deep learning-only
+        investigation. A no-trigger decision therefore forbids that extra work;
+        a trigger permits research only for the single selected concept.
+        """
+
+        return self.disposition is TriggerDisposition.LEARNING_OPPORTUNITY
+
+    @property
+    def research_concepts(self) -> tuple[str, ...]:
+        if not self.learning_research_allowed:
+            return ()
+        return tuple(opportunity.concept for opportunity in self.opportunities)
 
 
 def select_learning_opportunity(*, context: TaskContext, mode: InteractionMode, candidate_concepts: Iterable[str]) -> TriggerResult:

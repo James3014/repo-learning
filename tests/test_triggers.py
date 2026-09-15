@@ -47,3 +47,23 @@ def test_result_constructor_enforces_one_point_ceiling() -> None:
             TriggerDisposition.LEARNING_OPPORTUNITY,
             opportunities=(LearningOpportunity("a"), LearningOpportunity("b")),
         )
+
+
+def test_teaching_decision_precedes_and_bounds_learning_only_research() -> None:
+    result = select_learning_opportunity(
+        context=TaskContext(deep_learning_research_would_be_required=True),
+        mode=InteractionMode.OBSERVE,
+        candidate_concepts=["canonical state"],
+    )
+    assert result.disposition is TriggerDisposition.NO_TRIGGER
+    assert not result.learning_research_allowed
+
+
+def test_selected_learning_point_allows_research_for_only_that_point() -> None:
+    result = select_learning_opportunity(
+        context=TaskContext(deep_learning_research_would_be_required=True),
+        mode=InteractionMode.GUIDED,
+        candidate_concepts=["canonical state", "retry policy"],
+    )
+    assert result.learning_research_allowed
+    assert result.research_concepts == ("canonical state",)

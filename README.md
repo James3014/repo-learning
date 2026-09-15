@@ -51,6 +51,18 @@ James's canonical personal-learning owner does not move in G4. The Nexus Ledger 
 
 The following remain later gates: real multi-day Nexus-new/devspace dogfood, 8-repository rollout, canonical-state migration, Friend Alpha and learning-effectiveness evaluation.
 
+## Deterministic prep after G4
+
+The repository also contains bounded preparation work for later gates without claiming those gates complete:
+
+- **G5 hardening** — stale/unavailable learning state fails open to engineering; trigger/no-trigger is decided before deep learning-only research; an unanswered learning prompt is `skip/no-response`, never a blocker or negative mastery signal.
+- **G6-PREP** — `manifests/g6-rollout.v1.json` plus validation/dry-run code describes only thin context for the exact eight approved Nexus repositories. It performs no installation and stores no personal mastery or copied repository governance.
+- **G7-PREP** — migration preflight binds source/destination hashes, readback, event counts, projection equivalence and rollback evidence while preserving one writable SSOT. Contradictory assessed levels require reassessment rather than highest/latest-wins reduction. No James state is migrated by these primitives.
+- **G8-PREP** — local profile export/delete/reset and privacy-readiness checks prepare user data controls. They do not enroll a Friend Alpha participant.
+- **G9-PREP** — descriptive aggregation covers interruption/skip rates, interaction cost, cue reduction and delayed materially-different transfer. These metrics are explicitly not causal proof of learning effectiveness.
+
+Actual G6 rollout remains blocked on G5 closure; actual G7 cutover, G8 Friend Alpha and G9 effectiveness claims each require their later evidence/authority gates.
+
 ## Development
 
 Requires Python 3.11+.

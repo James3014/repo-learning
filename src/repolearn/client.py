@@ -8,6 +8,7 @@ computes the bounded state/trigger decision and never takes engineering control.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Iterable, Mapping, Any
 
 from .state import StateBackend, StateUnavailableError
@@ -21,6 +22,37 @@ class ClientLearningDecision:
     trigger: TriggerResult
     visible_learning_allowed: bool
     degraded_reason: str | None = None
+    engineering_may_continue: bool = True
+
+
+class LearningResponseDisposition(str, Enum):
+    ANSWERED = "ANSWERED"
+    SKIP_NO_RESPONSE = "SKIP_NO_RESPONSE"
+
+
+@dataclass(frozen=True)
+class LearningResponseResult:
+    disposition: LearningResponseDisposition
+    should_assess: bool
+    engineering_may_continue: bool = True
+
+
+def classify_learning_response(response: str | None) -> LearningResponseResult:
+    """Classify a visible learning prompt response without blocking engineering.
+
+    No response (including blank text) is a skip, never negative mastery
+    evidence and never a reason to wait. Engineering continues either way.
+    """
+
+    if response is None or not response.strip():
+        return LearningResponseResult(
+            disposition=LearningResponseDisposition.SKIP_NO_RESPONSE,
+            should_assess=False,
+        )
+    return LearningResponseResult(
+        disposition=LearningResponseDisposition.ANSWERED,
+        should_assess=True,
+    )
 
 
 def prepare_learning_decision(
@@ -54,6 +86,7 @@ def prepare_learning_decision(
     )
     visible_learning_allowed = (
         trigger.disposition is TriggerDisposition.LEARNING_OPPORTUNITY
+        and degraded_reason is None
         and not context.exact_machine_output
     )
     return ClientLearningDecision(
