@@ -4,7 +4,7 @@ RepoLearn has exactly one canonical personal-learning truth per user at a time.
 
 ## Generic local users
 
-Use `LocalFileBackend` for private local state. It stores profile-scoped `events.jsonl` plus a deterministic `state.json` projection with owner-only file permissions. Event identity is idempotent: replaying the same event is a no-op, while reusing an event ID for different content fails closed. Projection reads fail if the stored source hash no longer matches the event ledger. Distinct assessed levels for the same domain are conflicting learning evidence and require explicit reassessment; projection must not resolve them by highest-score-wins or latest-write-wins.
+Use `LocalFileBackend` for private local state. It stores profile-scoped `events.jsonl` plus a deterministic `state.json` projection with owner-only file permissions. Event identity is idempotent: replaying the same event is a no-op, while reusing an event ID for different content fails closed. Projection reads fail if the stored source hash no longer matches the event ledger. A later assessed recommendation that is lower than an already settled level requires explicit reassessment; projection must fail closed instead of silently keeping the highest score or accepting the later lower score. Normal monotonic progression such as `L2 -> L3` remains valid evidence.
 
 Local data controls support deterministic profile export plus profile-scoped delete/reset. They reject path traversal, symlinked profile data, and destructive deletion when unrecognized files are present.
 

@@ -85,13 +85,23 @@ def test_profile_path_traversal_is_rejected(tmp_path):
         backend.append_learning_event("../escape", event())
 
 
-def test_contradictory_assessed_levels_require_reassessment(tmp_path):
+def test_lower_assessed_level_after_higher_level_requires_reassessment(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event("ev-1", level="L3"))
+    backend.append_learning_event("james", event("ev-2", level="L2", observed_at="2026-09-16T12:00:00Z"))
+
+    with pytest.raises(ProjectionConflictError, match="reassessment"):
+        backend.refresh_projection("james")
+
+
+def test_monotonic_progression_is_not_false_conflict(tmp_path):
     backend = LocalFileBackend(tmp_path)
     backend.append_learning_event("james", event("ev-1", level="L2"))
     backend.append_learning_event("james", event("ev-2", level="L3", observed_at="2026-09-16T12:00:00Z"))
 
-    with pytest.raises(ProjectionConflictError, match="reassessment"):
-        backend.refresh_projection("james")
+    state = backend.refresh_projection("james")
+    assert state["domains"]["authority-boundaries"]["level"] == "L3"
+    assert state["domains"]["authority-boundaries"]["evidence_count"] == 2
 
 
 def test_repeated_same_level_and_unassessed_evidence_do_not_create_false_conflict(tmp_path):

@@ -179,7 +179,6 @@ class LocalFileBackend(StateBackend):
     def refresh_projection(self, profile_id: str) -> Mapping[str, Any]:
         events = self._read_events(profile_id)
         domains: dict[str, dict[str, Any]] = {}
-        assessed_levels: dict[str, set[str]] = {}
         latest_observed = "1970-01-01T00:00:00Z"
         for event in events:
             domain = event.get("capability", {}).get("domain")
@@ -194,26 +193,18 @@ class LocalFileBackend(StateBackend):
             )
             current["evidence_count"] += 1
             if level != "UNASSESSED":
-                assessed_levels.setdefault(domain, set()).add(level)
+                settled_level = current["level"]
+                if settled_level != "UNASSESSED" and _LEVEL_ORDER[level] < _LEVEL_ORDER[settled_level]:
+                    raise ProjectionConflictError(
+                        f"assessed level regression for {domain!r} from {settled_level} to {level} "
+                        "requires explicit reassessment before projection"
+                    )
+                current["level"] = level
             if isinstance(observed_at, str) and (current["last_observed_at"] is None or observed_at >= current["last_observed_at"]):
                 current["last_event_id"] = event_id
                 current["last_observed_at"] = observed_at
             if isinstance(observed_at, str) and observed_at > latest_observed:
                 latest_observed = observed_at
-
-        conflicts = {
-            domain: tuple(sorted(levels, key=_LEVEL_ORDER.__getitem__))
-            for domain, levels in assessed_levels.items()
-            if len(levels) > 1
-        }
-        if conflicts:
-            rendered = ", ".join(f"{domain}={levels}" for domain, levels in sorted(conflicts.items()))
-            raise ProjectionConflictError(
-                "conflicting assessed levels require explicit reassessment before projection: " + rendered
-            )
-        for domain, current in domains.items():
-            levels = assessed_levels.get(domain, set())
-            current["level"] = next(iter(levels)) if levels else "UNASSESSED"
 
         ledger_text = self._event_ledger_text(events)
         content_hash = _sha256_text(ledger_text)
