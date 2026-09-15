@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repolearn.dev/schemas/learning_state.v1.json",
+  "title": "RepoLearn Learning State v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "profile_id",
+    "revision",
+    "mastery",
+    "priority_frontiers"
+  ],
+  "properties": {
+    "schema": {
+      "const": "repolearn.learning_state.v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_content_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "mastery": {
+      "type": "object",
+      "additionalProperties": {
+        "enum": [
+          "UNASSESSED",
+          "L0",
+          "L1",
+          "L2",
+          "L3",
+          "L4"
+        ]
+      }
+    },
+    "priority_frontiers": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "cache_authority": {
+      "enum": [
+        "CANONICAL",
+        "DERIVED_CACHE_ONLY"
+      ]
+    }
+  }
+}

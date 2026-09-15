@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repolearn.dev/schemas/learning_event.v1.json",
+  "title": "RepoLearn Learning Event v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "event_id",
+    "observed_at",
+    "profile_id",
+    "context",
+    "capability",
+    "attempt",
+    "assessment",
+    "learning"
+  ],
+  "properties": {
+    "schema": {
+      "const": "repolearn.learning_event.v1"
+    },
+    "event_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "observed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repository_id"
+      ],
+      "properties": {
+        "repository_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": "string"
+        },
+        "task_ref": {
+          "type": "string"
+        },
+        "workspace_id": {
+          "type": "string"
+        },
+        "organization_id": {
+          "type": "string"
+        }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "domain",
+        "concept"
+      ],
+      "properties": {
+        "domain": {
+          "type": "string",
+          "minLength": 1
+        },
+        "concept": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cue_level",
+        "transfer_distance",
+        "delay"
+      ],
+      "properties": {
+        "judgment": {
+          "type": "string"
+        },
+        "cue_level": {
+          "enum": [
+            "NONE",
+            "LIGHT",
+            "HEAVY"
+          ]
+        },
+        "transfer_distance": {
+          "enum": [
+            "SAME_STRUCTURE",
+            "NEAR_TRANSFER",
+            "FAR_TRANSFER"
+          ]
+        },
+        "delay": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "inspected": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "outcome": {
+          "type": "string"
+        },
+        "source_excerpt_persisted": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "assessment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "classification",
+        "mastery_effect",
+        "rationale"
+      ],
+      "properties": {
+        "classification": {
+          "type": "string",
+          "minLength": 1
+        },
+        "mastery_effect": {
+          "enum": [
+            "UNASSESSED",
+            "L0",
+            "L1",
+            "L2",
+            "L3",
+            "L4",
+            "NO_CHANGE"
+          ]
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        },
+        "judgment_quality": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "goal_identification": {
+              "type": "boolean"
+            },
+            "constraint_identification": {
+              "type": "boolean"
+            },
+            "alternatives": {
+              "type": "boolean"
+            },
+            "tradeoff": {
+              "type": "boolean"
+            },
+            "evidence": {
+              "type": "boolean"
+            },
+            "falsifier": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "learning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reusable_principle",
+        "applicability_boundary"
+      ],
+      "properties": {
+        "reusable_principle": {
+          "type": "string"
+        },
+        "applicability_boundary": {
+          "type": "string"
+        },
+        "next_challenge": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
