@@ -1,0 +1,101 @@
+{
+  "schema": "repolearn.rollout_manifest.v1",
+  "repositories": [
+    {
+      "repository": "James3014/Nexus-new",
+      "authority_reference": "AGENTS.md",
+      "mode": "guided",
+      "clients": ["codex", "claude"],
+      "privacy": {
+        "persist_source_excerpts": false,
+        "persist_transcripts": false,
+        "persist_personal_state_in_repository": false
+      },
+      "context_adapter": "thin-reference-only"
+    },
+    {
+      "repository": "James3014/devspace",
+      "authority_reference": "AGENTS.md",
+      "mode": "guided",
+      "clients": ["codex", "claude"],
+      "privacy": {
+        "persist_source_excerpts": false,
+        "persist_transcripts": false,
+        "persist_personal_state_in_repository": false
+      },
+      "context_adapter": "thin-reference-only"
+    },
+    {
+      "repository": "James3014/nexus-core",
+      "authority_reference": "AGENTS.md",
+      "mode": "guided",
+      "clients": ["codex", "claude"],
+      "privacy": {
+        "persist_source_excerpts": false,
+        "persist_transcripts": false,
+        "persist_personal_state_in_repository": false
+      },
+      "context_adapter": "thin-reference-only"
+    },
+    {
+      "repository": "James3014/nexus-learning",
+      "authority_reference": "AGENTS.md",
+      "mode": "guided",
+      "clients": ["codex", "claude"],
+      "privacy": {
+        "persist_source_excerpts": false,
+        "persist_transcripts": false,
+        "persist_personal_state_in_repository": false
+      },
+      "context_adapter": "thin-reference-only"
+    },
+    {
+      "repository": "James3014/nexus-open-swe-runtime",
+      "authority_reference": "AGENTS.md",
+      "mode": "guided",
+      "clients": ["codex", "claude"],
+      "privacy": {
+        "persist_source_excerpts": false,
+        "persist_transcripts": false,
+        "persist_personal_state_in_repository": false
+      },
+      "context_adapter": "thin-reference-only"
+    },
+    {
+      "repository": "James3014/repository-intelligence-engine",
+      "authority_reference": "AGENTS.md",
+      "mode": "guided",
+      "clients": ["codex", "claude"],
+      "privacy": {
+        "persist_source_excerpts": false,
+        "persist_transcripts": false,
+        "persist_personal_state_in_repository": false
+      },
+      "context_adapter": "thin-reference-only"
+    },
+    {
+      "repository": "James3014/nexus-runtime",
+      "authority_reference": "AGENTS.md",
+      "mode": "guided",
+      "clients": ["codex", "claude"],
+      "privacy": {
+        "persist_source_excerpts": false,
+        "persist_transcripts": false,
+        "persist_personal_state_in_repository": false
+      },
+      "context_adapter": "thin-reference-only"
+    },
+    {
+      "repository": "James3014/nexus-opencli-reviewer",
+      "authority_reference": "AGENTS.md",
+      "mode": "guided",
+      "clients": ["codex", "claude"],
+      "privacy": {
+        "persist_source_excerpts": false,
+        "persist_transcripts": false,
+        "persist_personal_state_in_repository": false
+      },
+      "context_adapter": "thin-reference-only"
+    }
+  ]
+}

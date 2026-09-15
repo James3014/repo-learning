@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
-from repolearn import BackendConflictError, LocalFileBackend, StaleProjectionError
+from repolearn import BackendConflictError, LocalFileBackend, ProjectionConflictError, StaleProjectionError
 
 
 def event(event_id: str = "ev-1", *, level: str = "L2", observed_at: str = "2026-09-15T12:00:00Z") -> dict:
@@ -82,3 +83,93 @@ def test_profile_path_traversal_is_rejected(tmp_path):
     backend = LocalFileBackend(tmp_path)
     with pytest.raises(ValueError):
         backend.append_learning_event("../escape", event())
+
+
+def test_contradictory_assessed_levels_require_reassessment(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event("ev-1", level="L2"))
+    backend.append_learning_event("james", event("ev-2", level="L3", observed_at="2026-09-16T12:00:00Z"))
+
+    with pytest.raises(ProjectionConflictError, match="reassessment"):
+        backend.refresh_projection("james")
+
+
+def test_repeated_same_level_and_unassessed_evidence_do_not_create_false_conflict(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event("ev-1", level="UNASSESSED"))
+    backend.append_learning_event("james", event("ev-2", level="L2", observed_at="2026-09-16T12:00:00Z"))
+    backend.append_learning_event("james", event("ev-3", level="L2", observed_at="2026-09-17T12:00:00Z"))
+
+    state = backend.refresh_projection("james")
+    assert state["domains"]["authority-boundaries"]["level"] == "L2"
+    assert state["domains"]["authority-boundaries"]["evidence_count"] == 3
+
+
+def test_profile_export_is_deterministic_and_bound_to_valid_projection(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event())
+    backend.refresh_projection("james")
+
+    first = backend.export_profile("james")
+    second = backend.export_profile("james")
+    assert first == second
+    payload = json.loads(first)
+    assert payload["schema"] == "repolearn.profile_export.v1"
+    assert payload["profile_id"] == "james"
+    assert payload["events"] == [event()]
+    assert payload["state"]["source"]["content_hash"]
+
+
+def test_delete_and_reset_are_profile_scoped(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event())
+    backend.refresh_projection("james")
+    backend.append_learning_event("other", {**event(), "event_id": "other-1", "profile_id": "other"})
+    backend.refresh_projection("other")
+
+    assert backend.delete_profile("james")
+    assert not (tmp_path / "profiles" / "james").exists()
+    assert (tmp_path / "profiles" / "other" / "events.jsonl").exists()
+
+    reset = backend.reset_profile("james")
+    assert reset["domains"] == {}
+    assert backend.read_related_history("james") == ()
+
+
+def test_data_controls_reject_symlinked_profile_path(tmp_path):
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    profiles = tmp_path / "profiles"
+    profiles.mkdir()
+    (profiles / "james").symlink_to(outside, target_is_directory=True)
+    backend = LocalFileBackend(tmp_path)
+
+    with pytest.raises(ValueError, match="symlink"):
+        backend.export_profile("james")
+    with pytest.raises(ValueError, match="symlink"):
+        backend.delete_profile("james")
+
+
+def test_delete_refuses_unrecognized_profile_files(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event())
+    profile = tmp_path / "profiles" / "james"
+    (profile / "keep.txt").write_text("do not delete")
+
+    with pytest.raises(BackendConflictError, match="unrecognized"):
+        backend.delete_profile("james")
+    assert (profile / "keep.txt").exists()
+
+
+def test_backend_rejects_symlinked_data_files(tmp_path):
+    profile = tmp_path / "profiles" / "james"
+    profile.mkdir(parents=True)
+    outside = tmp_path / "outside-events"
+    outside.write_text("")
+    (profile / "events.jsonl").symlink_to(outside)
+    backend = LocalFileBackend(tmp_path)
+
+    with pytest.raises(ValueError, match="symlinks"):
+        backend.read_related_history("james")
+    with pytest.raises(ValueError, match="symlinks"):
+        backend.append_learning_event("james", event())

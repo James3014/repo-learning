@@ -23,8 +23,17 @@ class BackendConflictError(RuntimeError):
     """Raised when a stable identity is reused for different durable content."""
 
 
-class StaleProjectionError(RuntimeError):
-    """Raised when a stored projection is no longer bound to its event ledger."""
+class StaleProjectionError(StateUnavailableError):
+    """Raised when a stored projection is no longer bound to its event ledger.
+
+    For normal client interactions this is an unavailable learning-state
+    condition and therefore fails open to engineering. Migration preflight treats
+    the same condition as fail-closed evidence.
+    """
+
+
+class ProjectionConflictError(StateUnavailableError):
+    """Raised when learning evidence requires explicit reassessment."""
 
 
 class ReadOnlyCanonicalBackendError(RuntimeError):
@@ -56,13 +65,36 @@ class LocalFileBackend(StateBackend):
         self.root = Path(root).expanduser()
 
     def _profile_dir(self, profile_id: str) -> Path:
-        return self.root / "profiles" / _validate_profile_id(profile_id)
+        profiles = self.root / "profiles"
+        if profiles.is_symlink():
+            raise ValueError("profiles directory must not be a symlink")
+        path = profiles / _validate_profile_id(profile_id)
+        if path.is_symlink():
+            raise ValueError("profile path must not be a symlink")
+        return path
+
+    def _validate_profile_storage(self, profile_id: str) -> Path:
+        profile = self._profile_dir(profile_id)
+        if not profile.exists():
+            return profile
+        if not profile.is_dir():
+            raise BackendConflictError("profile path is not a directory")
+        for child in profile.iterdir():
+            if child.is_symlink():
+                raise ValueError("profile data files must not be symlinks")
+        return profile
 
     def _events_path(self, profile_id: str) -> Path:
-        return self._profile_dir(profile_id) / "events.jsonl"
+        path = self._profile_dir(profile_id) / "events.jsonl"
+        if path.is_symlink():
+            raise ValueError("profile data files must not be symlinks")
+        return path
 
     def _state_path(self, profile_id: str) -> Path:
-        return self._profile_dir(profile_id) / "state.json"
+        path = self._profile_dir(profile_id) / "state.json"
+        if path.is_symlink():
+            raise ValueError("profile data files must not be symlinks")
+        return path
 
     def _read_events(self, profile_id: str) -> list[dict[str, Any]]:
         path = self._events_path(profile_id)
@@ -147,6 +179,7 @@ class LocalFileBackend(StateBackend):
     def refresh_projection(self, profile_id: str) -> Mapping[str, Any]:
         events = self._read_events(profile_id)
         domains: dict[str, dict[str, Any]] = {}
+        assessed_levels: dict[str, set[str]] = {}
         latest_observed = "1970-01-01T00:00:00Z"
         for event in events:
             domain = event.get("capability", {}).get("domain")
@@ -160,13 +193,27 @@ class LocalFileBackend(StateBackend):
                 {"level": "UNASSESSED", "evidence_count": 0, "last_event_id": None, "last_observed_at": None},
             )
             current["evidence_count"] += 1
-            if _LEVEL_ORDER[level] > _LEVEL_ORDER[current["level"]]:
-                current["level"] = level
+            if level != "UNASSESSED":
+                assessed_levels.setdefault(domain, set()).add(level)
             if isinstance(observed_at, str) and (current["last_observed_at"] is None or observed_at >= current["last_observed_at"]):
                 current["last_event_id"] = event_id
                 current["last_observed_at"] = observed_at
             if isinstance(observed_at, str) and observed_at > latest_observed:
                 latest_observed = observed_at
+
+        conflicts = {
+            domain: tuple(sorted(levels, key=_LEVEL_ORDER.__getitem__))
+            for domain, levels in assessed_levels.items()
+            if len(levels) > 1
+        }
+        if conflicts:
+            rendered = ", ".join(f"{domain}={levels}" for domain, levels in sorted(conflicts.items()))
+            raise ProjectionConflictError(
+                "conflicting assessed levels require explicit reassessment before projection: " + rendered
+            )
+        for domain, current in domains.items():
+            levels = assessed_levels.get(domain, set())
+            current["level"] = next(iter(levels)) if levels else "UNASSESSED"
 
         ledger_text = self._event_ledger_text(events)
         content_hash = _sha256_text(ledger_text)
@@ -198,6 +245,49 @@ class LocalFileBackend(StateBackend):
         if concept is not None:
             events = [event for event in events if event.get("capability", {}).get("concept") == concept]
         return tuple(events[-limit:] if limit else [])
+
+    def export_profile(self, profile_id: str) -> str:
+        """Return a deterministic privacy-scoped export without mutating state."""
+
+        profile = self._validate_profile_storage(profile_id)
+        events = self._read_events(profile_id)
+        state = self.read_current_state(profile_id)
+        if state is None and events:
+            raise StaleProjectionError("profile export requires a current state projection")
+        payload = {
+            "schema": "repolearn.profile_export.v1",
+            "profile_id": _validate_profile_id(profile_id),
+            "events": events,
+            "state": state,
+        }
+        # Accessing the path is intentional even for an empty profile: it applies
+        # the same symlink/path validation as destructive controls.
+        _ = profile
+        return _canonical_json(payload) + "\n"
+
+    def delete_profile(self, profile_id: str) -> bool:
+        """Delete only recognized files for one profile, refusing surprises."""
+
+        profile = self._validate_profile_storage(profile_id)
+        if not profile.exists():
+            return False
+        allowed = {"events.jsonl", "state.json"}
+        children = tuple(profile.iterdir())
+        unknown = [child.name for child in children if child.name not in allowed or not child.is_file()]
+        if unknown:
+            raise BackendConflictError(
+                "refusing to delete profile with unrecognized files: " + ", ".join(sorted(unknown))
+            )
+        for child in children:
+            child.unlink()
+        profile.rmdir()
+        return True
+
+    def reset_profile(self, profile_id: str) -> Mapping[str, Any]:
+        """Reset one profile to an empty projection without touching siblings."""
+
+        self.delete_profile(profile_id)
+        return self.refresh_projection(profile_id)
 
 
 class NexusLedgerBackend(StateBackend):

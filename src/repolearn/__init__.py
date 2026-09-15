@@ -13,10 +13,17 @@ from .backends import (
     BackendConflictError,
     LocalFileBackend,
     NexusLedgerBackend,
+    ProjectionConflictError,
     ReadOnlyCanonicalBackendError,
     StaleProjectionError,
 )
-from .client import ClientLearningDecision, prepare_learning_decision
+from .client import (
+    ClientLearningDecision,
+    LearningResponseDisposition,
+    LearningResponseResult,
+    classify_learning_response,
+    prepare_learning_decision,
+)
 from .state import StateBackend, StateUnavailableError
 from .triggers import (
     InteractionMode,
@@ -36,9 +43,12 @@ __all__ = [
     "InteractionMode",
     "JudgmentEvidence",
     "LearningOpportunity",
+    "LearningResponseDisposition",
+    "LearningResponseResult",
     "LocalFileBackend",
     "MasteryLevel",
     "NexusLedgerBackend",
+    "ProjectionConflictError",
     "ReadOnlyCanonicalBackendError",
     "StaleProjectionError",
     "StateBackend",
@@ -48,6 +58,7 @@ __all__ = [
     "TriggerDisposition",
     "TriggerResult",
     "assess_judgment",
+    "classify_learning_response",
     "prepare_learning_decision",
     "select_learning_opportunity",
 ]
