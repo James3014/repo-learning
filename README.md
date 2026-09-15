@@ -37,15 +37,19 @@ Key invariants:
 - Client-native memory is not canonical mastery storage.
 - Learning state never changes engineering authority.
 
-## G1 non-goals
+## Portable runtime: G2 + G3 + G4
 
-G1 intentionally does **not** implement:
+The portable-runtime layer adds:
 
-- a backend server, daemon, database service, cloud service, dashboard, vector database, or knowledge graph;
-- a custom AI runtime, model gateway, or router;
-- the G2 Agent Skill;
-- `LocalFileBackend` or `NexusLedgerBackend` concrete storage;
-- repository rollout, canonical-state migration, or external Alpha workflows.
+- one canonical Agent Skills source at `skills/repo-learning/`;
+- client-specific Codex and Claude Code installation projections without policy forks;
+- a client-neutral state/trigger preparation contract that degrades to normal engineering when learning state is unavailable;
+- `LocalFileBackend` for private local JSONL events plus deterministic JSON projection, with stable event idempotency, conflict detection, stale-projection detection and owner-only file permissions;
+- `NexusLedgerBackend` as a hash/revision-bound **read-through** adapter for James's existing Nexus Owner-learning Ledger.
+
+James's canonical personal-learning owner does not move in G4. The Nexus Ledger remains the writable SSOT until a later explicit migration transaction; RepoLearn does not create a second writable James mastery store.
+
+The following remain later gates: real multi-day Nexus-new/devspace dogfood, 8-repository rollout, canonical-state migration, Friend Alpha and learning-effectiveness evaluation.
 
 ## Development
 
