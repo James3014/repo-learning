@@ -17,8 +17,9 @@ If a visible learning prompt receives no response, record only `skip/no-response
 
 Modes:
 
+- Default to `guided` when the user or host does not explicitly select a mode. This includes both explicit RepoLearn invocation without a mode and automatic Skill selection.
 - `observe`: no proactive quiz; notice opportunities only.
-- `guided`: at most one primary architecture judgment point per meaningful task.
+- `guided`: at most one primary architecture judgment point per meaningful task. Guided does not require a visible prompt on every task; apply the trigger policy first. When a high-value opportunity is selected, surface the judgment point before revealing decisive evidence.
 - `practice`: user explicitly accepts stronger learning load, while engineering authority remains unchanged.
 
 ## Cue fading
