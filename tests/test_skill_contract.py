@@ -33,17 +33,59 @@ def test_explicit_activation_hard_suppressors_are_bounded():
     assert "Chat memory by itself is not sufficient evidence for cue-fading suppression" in POLICY
 
 
-def test_selected_guided_opportunity_requires_exactly_one_prompt_before_solution():
-    assert "enforce this hard two-branch contract" in SKILL
-    assert "MUST surface exactly one concise primary architecture judgment prompt" in SKILL
-    assert "MUST NOT be converted into explanation-only output" in SKILL
-    assert "MUST emit exactly one concise primary judgment prompt" in POLICY
+def test_selected_guided_opportunity_chooses_exactly_one_learning_branch():
+    assert "`LEARNING_OPPORTUNITY`: choose exactly one of the following two branches" in SKILL
+    assert "`JUDGMENT_PROMPT`" in SKILL
+    assert "`SPONTANEOUS_JUDGMENT_CAPTURE`" in SKILL
+    assert "choose exactly one interaction branch" in POLICY
+
+
+def test_guided_prompt_branch_remains_one_plain_language_question():
+    assert "Surface exactly one concise primary architecture judgment prompt" in SKILL
+    assert "Prefer plain-language choices or questions over unexplained engineering jargon" in SKILL
+    assert "Emit exactly one concise primary judgment prompt" in POLICY
+    assert "Prefer plain-language alternatives or questions over unexplained engineering jargon" in POLICY
+
+
+def test_spontaneous_judgment_capture_does_not_requiz():
+    assert "Do not re-ask the judgment" in SKILL
+    assert "give bounded feedback on the reasoning rather than mere agreement" in SKILL
+    assert "extract one reusable principle in plain language" in SKILL
+    assert "state one important applicability boundary or counterexample" in SKILL
+    assert "Do not re-ask the judgment" in POLICY
+    assert "give bounded feedback on the reasoning rather than mere agreement" in POLICY
+
+
+def test_plain_language_judgment_is_eligible_without_terminology():
+    assert "Engineering vocabulary is not a prerequisite for either branch" in SKILL
+    assert "Engineering terminology is not a prerequisite for architecture evidence" in SKILL
+    assert "Engineering vocabulary is not a prerequisite for architecture evidence" in POLICY
+    assert "English terminology friction must not lower mastery" in POLICY
+
+
+def test_only_pre_feedback_user_reasoning_can_count_as_mastery_evidence():
+    assert "only reasoning expressed before RepoLearn feedback or decisive evidence may count as candidate mastery evidence" in SKILL
+    assert "the AI's reformulation, naming, or explanation is exposure, not user evidence" in SKILL
+    assert "Only the user's reasoning expressed before RepoLearn feedback or decisive evidence may support a mastery update" in POLICY
+    assert "the translation itself is not user evidence" in POLICY
+
+
+def test_post_evidence_agreement_is_not_spontaneous_pre_evidence_judgment():
+    assert "decisive evidence has not already supplied the answer" in SKILL
+    assert "If decisive evidence or the relevant answer was already revealed before the user's statement" in POLICY
+    assert "do not relabel later agreement or paraphrase as spontaneous pre-evidence judgment" in POLICY
 
 
 def test_no_trigger_remains_silent_and_nonblocking():
-    assert "`NO_TRIGGER`: emit no learning prompt and continue normal engineering." in SKILL
-    assert "`NO_TRIGGER`: emit no learning prompt and continue normal engineering." in POLICY
+    assert "`NO_TRIGGER`: emit no learning interaction and continue normal engineering." in SKILL
+    assert "`NO_TRIGGER`: emit no learning interaction and continue normal engineering." in POLICY
     assert "continue normal engineering without waiting" in SKILL
+
+
+def test_unanswered_prompt_remains_fail_open_without_second_prompt():
+    assert "classify it as `skip/no-response` and continue normal engineering without waiting" in SKILL
+    assert "Do not emit a second prompt for the same selected point" in SKILL
+    assert "Do not emit another prompt for the same selected point" in POLICY
 
 
 def test_auto_discovery_does_not_prove_repository_activation():
