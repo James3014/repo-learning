@@ -40,11 +40,24 @@ def test_selected_guided_opportunity_chooses_exactly_one_learning_branch():
     assert "choose exactly one interaction branch" in POLICY
 
 
-def test_guided_prompt_branch_remains_one_plain_language_question():
+def test_guided_prompt_branch_requires_role_first_comprehensibility():
     assert "Surface exactly one concise primary architecture judgment prompt" in SKILL
-    assert "Prefer plain-language choices or questions over unexplained engineering jargon" in SKILL
+    assert "MUST be understandable from roles, decisions, and trade-offs in plain language" in SKILL
+    assert "Use role-first, identifier-second framing" in SKILL
+    assert "Apply an identifier-removal check before emitting the prompt" in SKILL
+    assert "Do not turn source recall into an architecture test" in SKILL
     assert "Emit exactly one concise primary judgment prompt" in POLICY
-    assert "Prefer plain-language alternatives or questions over unexplained engineering jargon" in POLICY
+    assert "Plain-language-first is mandatory" in POLICY
+    assert "Use role-first, identifier-second framing" in POLICY
+    assert "perform an identifier-removal check" in POLICY
+    assert "Do not ask the user to name an internal contract/component" in POLICY
+
+
+def test_prompt_comprehension_defect_is_not_user_regression_or_skip():
+    assert "incomprehensible identifier-first prompt is an interaction defect" in SKILL
+    assert "not `skip/no-response`" in SKILL
+    assert "classify that interaction as a prompt-comprehension defect" in POLICY
+    assert "rather than user failure, skip/no-response, or mastery regression" in POLICY
 
 
 def test_spontaneous_judgment_capture_does_not_requiz():

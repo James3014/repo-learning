@@ -31,7 +31,7 @@ For `guided`, enforce a hard interaction contract before substantive recommendat
 
 - `NO_TRIGGER`: emit no learning interaction and continue normal engineering.
 - `LEARNING_OPPORTUNITY`: choose exactly one interaction branch using the user's own pre-feedback reasoning:
-  - `JUDGMENT_PROMPT`: use when the user has not yet expressed a meaningful judgment on the selected architecture point. Emit exactly one concise primary judgment prompt. Prefer plain-language alternatives or questions over unexplained engineering jargon.
+  - `JUDGMENT_PROMPT`: use when the user has not yet expressed a meaningful judgment on the selected architecture point. Emit exactly one concise primary judgment prompt. Plain-language-first is mandatory: state the roles, decision, and trade-off so the question is understandable before optional repository-specific identifiers appear. Use role-first, identifier-second framing; exact component/API/schema/state/contract names may be added afterward only for traceability. Before emitting, perform an identifier-removal check: removing repository-specific names must still leave the architecture choice understandable. Do not ask the user to name an internal contract/component unless source recall itself is the explicit learning target.
   - `SPONTANEOUS_JUDGMENT_CAPTURE`: use when the user's own prior message already contains a meaningful judgment relevant to the selected architecture point and decisive evidence has not already supplied the answer. Do not re-ask the judgment. Briefly identify what the user noticed or chose, give bounded feedback on the reasoning rather than mere agreement, extract one reusable principle in plain language, optionally name the engineering term after the plain-language explanation, and state one important applicability boundary or counterexample.
 
 A selected `LEARNING_OPPORTUNITY` must not be replaced by explanation-only output or silently downgraded because the activation came from a repository pointer or because `guided` was implicit.
@@ -41,6 +41,8 @@ After a `JUDGMENT_PROMPT`, continue the engineering task without requiring a res
 After `SPONTANEOUS_JUDGMENT_CAPTURE`, continue engineering immediately. The user's own pre-feedback reasoning may be candidate mastery evidence; the AI's feedback, terminology, reformulation, or explanation is exposure and must not be scored as user evidence.
 
 Engineering vocabulary is not a prerequisite for architecture evidence. Plain-language statements such as questioning why two owners can both change the same truth, why unrelated responsibilities are coupled, or whether merged source is actually running may contain meaningful architecture judgment. English terminology friction must not lower mastery.
+
+Prompt comprehensibility is part of the interaction contract. A selected architecture concept can be valid while the emitted prompt is defective. If the user cannot understand the architecture choice without first decoding repository-specific identifiers, classify that interaction as a prompt-comprehension defect rather than user failure, skip/no-response, or mastery regression.
 
 If decisive evidence or the relevant answer was already revealed before the user's statement, do not relabel later agreement or paraphrase as spontaneous pre-evidence judgment.
 
