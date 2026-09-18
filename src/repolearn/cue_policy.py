@@ -49,16 +49,29 @@ def _format_datetime(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
-def derive_fading_decision(event: Mapping[str, Any]) -> FadingDecision:
+def derive_fading_decision(
+    event: Mapping[str, Any],
+    *,
+    previous_observed_at: str | None = None,
+) -> FadingDecision:
     """Derive temporary cue suppression from evidence facts.
 
-    Legacy silent_cue_fading_eligible event flags are deliberately ignored.
+    Legacy silent_cue_fading_eligible and reported delay_hours fields are
+    deliberately not authority. Delay is verified from durable event timestamps.
     """
 
     attempt = event.get("attempt", {})
     assessment = event.get("assessment", {})
     if not isinstance(attempt, Mapping) or not isinstance(assessment, Mapping):
         return FadingDecision(False, reason="missing_attempt_or_assessment")
+
+    observed_at = _parse_datetime(event.get("observed_at"))
+    previous = _parse_datetime(previous_observed_at)
+    if observed_at is None:
+        return FadingDecision(False, reason="invalid_observed_at")
+    if previous is None:
+        return FadingDecision(False, reason="no_prior_exposure")
+    verified_delay_hours = (observed_at - previous).total_seconds() / 3600.0
 
     checks = (
         (attempt.get("user_attempted", True) is not False, "no_user_attempt"),
@@ -68,11 +81,7 @@ def derive_fading_decision(event: Mapping[str, Any]) -> FadingDecision:
         (attempt.get("independence") == AttemptIndependence.INDEPENDENT.value, "not_independent"),
         (attempt.get("cue_level") == "NONE", "cue_present"),
         (attempt.get("transfer_distance") in {"NEAR_TRANSFER", "FAR_TRANSFER"}, "not_transfer"),
-        (
-            isinstance(attempt.get("delay_hours"), (int, float))
-            and float(attempt["delay_hours"]) >= MIN_FADING_DELAY_HOURS,
-            "insufficient_delay",
-        ),
+        (verified_delay_hours >= MIN_FADING_DELAY_HOURS, "insufficient_delay"),
         (
             assessment.get("classification")
             in {"TRANSFER_WITH_TRADEOFFS", "INDEPENDENT_FALSIFIER"},
@@ -89,9 +98,6 @@ def derive_fading_decision(event: Mapping[str, Any]) -> FadingDecision:
         if not passed:
             return FadingDecision(False, reason=reason)
 
-    observed_at = _parse_datetime(event.get("observed_at"))
-    if observed_at is None:
-        return FadingDecision(False, reason="invalid_observed_at")
     event_id = event.get("event_id")
     if not isinstance(event_id, str) or not event_id.strip():
         return FadingDecision(False, reason="missing_event_id")
