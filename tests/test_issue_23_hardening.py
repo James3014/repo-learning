@@ -139,7 +139,7 @@ def test_self_reported_receipt_cannot_be_independent_g5_evidence():
 def test_independent_receipt_requires_matching_loaded_contract():
     observed = receipt()
     assert observed.qualifies_for_independent_g5_evidence(
-        expected_content_sha256="a" * 64
+        expected_content_sha256=CONTRACT_CONTENT_SHA256
     )
     assert not observed.attestation_matches(
         expected_content_sha256="c" * 64
