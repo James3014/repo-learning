@@ -113,6 +113,7 @@ class InteractionObservationReceipt:
     prompt_visible_in_final_response: bool | None
     prompt_before_decisive_evidence: bool | None
     answer_revealing_progress_before_prompt: bool
+    response_present: bool
     response_relevance: ResponseRelevance
     engineering_blocked: bool
     cue_fading_suppressed: bool = False
@@ -137,7 +138,7 @@ class InteractionObservationReceipt:
         if not self.branch_selection_valid:
             return InteractionDefect.GUIDED_BRANCH_SELECTION_DEFECT
         if self.selected_branch is GuidedBranch.JUDGMENT_PROMPT:
-            return PromptDeliveryObservation(
+            prompt_defect = PromptDeliveryObservation(
                 prompt_generated=self.prompt_generated,
                 prompt_answerable_without_repo_vocabulary=self.prompt_answerable_without_repo_vocabulary,
                 terminology_clarification_required=self.terminology_clarification_required,
@@ -145,4 +146,34 @@ class InteractionObservationReceipt:
                 prompt_before_decisive_evidence=self.prompt_before_decisive_evidence,
                 answer_revealing_progress_before_prompt=self.answer_revealing_progress_before_prompt,
             ).defect
+            if prompt_defect is not InteractionDefect.NONE:
+                return prompt_defect
+            if self.response_present and self.response_relevance is ResponseRelevance.UNKNOWN:
+                return InteractionDefect.RESPONSE_RELEVANCE_DEFECT
         return InteractionDefect.NONE
+
+    def to_dict(self) -> dict[str, object]:
+        """Return a bounded schema-ready receipt without user/repository text."""
+
+        return {
+            "schema": "repolearn.interaction_observation.v1",
+            "task_id": self.task_id,
+            "activation_source": self.activation_source.value,
+            "trigger_selected": self.trigger_selected,
+            "selected_branch": self.selected_branch.value if self.selected_branch else None,
+            "spontaneous_judgment_present": self.spontaneous_judgment_present,
+            "branch_selection_valid": self.branch_selection_valid,
+            "prompt_generated": self.prompt_generated,
+            "prompt_answerable_without_repo_vocabulary": self.prompt_answerable_without_repo_vocabulary,
+            "terminology_clarification_required": self.terminology_clarification_required,
+            "prompt_visible_in_final_response": self.prompt_visible_in_final_response,
+            "prompt_before_decisive_evidence": self.prompt_before_decisive_evidence,
+            "answer_revealing_progress_before_prompt": self.answer_revealing_progress_before_prompt,
+            "response_present": self.response_present,
+            "response_relevance": self.response_relevance.value,
+            "engineering_blocked": self.engineering_blocked,
+            "interaction_defect": self.interaction_defect.value,
+            "cue_fading_suppressed": self.cue_fading_suppressed,
+            "cue_level": self.cue_level,
+            "transfer_distance": self.transfer_distance,
+        }
