@@ -90,11 +90,11 @@ def test_pre_evidence_ordering_defect_is_not_user_skip_or_regression():
 
 
 def test_spontaneous_judgment_capture_does_not_requiz():
-    assert "Do not re-ask the judgment" in SKILL
+    assert "Do not re-ask a qualifying judgment" in SKILL
     assert "give bounded feedback on the reasoning rather than mere agreement" in SKILL
     assert "extract one reusable principle in plain language" in SKILL
     assert "state one important applicability boundary or counterexample" in SKILL
-    assert "Do not re-ask the judgment" in POLICY
+    assert "Do not re-ask a qualifying judgment" in POLICY
     assert "give bounded feedback on the reasoning rather than mere agreement" in POLICY
 
 
@@ -106,10 +106,10 @@ def test_plain_language_judgment_is_eligible_without_terminology():
 
 
 def test_only_pre_feedback_user_reasoning_can_count_as_mastery_evidence():
-    assert "only reasoning expressed before RepoLearn feedback or decisive evidence may count as candidate mastery evidence" in SKILL
-    assert "the AI's reformulation, naming, or explanation is exposure, not user evidence" in SKILL
-    assert "Only the user's reasoning expressed before RepoLearn feedback or decisive evidence may support a mastery update" in POLICY
-    assert "the translation itself is not user evidence" in POLICY
+    assert "Only user-authored reasoning expressed before RepoLearn feedback or decisive evidence may promote mastery" in SKILL
+    assert "AI reformulation or explanation must not be credited to the user" in SKILL
+    assert "Only user-authored reasoning expressed before RepoLearn feedback or decisive evidence may support a mastery update" in POLICY
+    assert "the translation and any additional rationale it invents are not user evidence" in POLICY
 
 
 def test_post_evidence_agreement_is_not_spontaneous_pre_evidence_judgment():
@@ -125,9 +125,9 @@ def test_no_trigger_remains_silent_and_nonblocking():
 
 
 def test_unanswered_prompt_remains_fail_open_without_second_prompt():
-    assert "classify it as `skip/no-response` and continue normal engineering without waiting" in SKILL
-    assert "Do not emit a second prompt for the same selected point" in SKILL
-    assert "Do not emit another prompt for the same selected point" in POLICY
+    assert "A blank/no response, explicit skip, unrelated engineering instruction, or semantically unclassified turn is not assessable learning evidence" in SKILL
+    assert "Do not emit a second unique prompt for the same selected point" in SKILL
+    assert "Do not emit another unique prompt for the same selected point" in POLICY
 
 
 def test_auto_discovery_does_not_prove_repository_activation():
