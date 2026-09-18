@@ -217,6 +217,13 @@
         "boolean",
         "null"
       ]
+    },
+    "generator_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 120
     }
   }
 }
