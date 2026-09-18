@@ -16,6 +16,12 @@ class InteractionMode(str, Enum):
     PRACTICE = "practice"
 
 
+class ActivationSource(str, Enum):
+    REPOSITORY_POINTER = "repository_pointer"
+    EXPLICIT_INVOCATION = "explicit_invocation"
+    AUTO_DISCOVERY = "auto_discovery"
+
+
 class TriggerDisposition(str, Enum):
     NO_TRIGGER = "NO_TRIGGER"
     LEARNING_OPPORTUNITY = "LEARNING_OPPORTUNITY"
@@ -29,6 +35,8 @@ class TaskContext:
     exact_machine_output: bool = False
     decisive_evidence_already_revealed: bool = False
     deep_learning_research_would_be_required: bool = False
+    activation_source: ActivationSource = ActivationSource.EXPLICIT_INVOCATION
+    automatic_discovery_trigger_eligible: bool = False
 
 
 @dataclass(frozen=True)
@@ -56,13 +64,6 @@ class TriggerResult:
 
     @property
     def learning_research_allowed(self) -> bool:
-        """Whether learning-only research may proceed after the trigger decision.
-
-        Trigger selection is deliberately cheaper than any deep learning-only
-        investigation. A no-trigger decision therefore forbids that extra work;
-        a trigger permits research only for the single selected concept.
-        """
-
         return self.disposition is TriggerDisposition.LEARNING_OPPORTUNITY
 
     @property
@@ -72,13 +73,20 @@ class TriggerResult:
         return tuple(opportunity.concept for opportunity in self.opportunities)
 
 
-def select_learning_opportunity(*, context: TaskContext, mode: InteractionMode, candidate_concepts: Iterable[str]) -> TriggerResult:
-    """Select zero or one learning point.
+def select_learning_opportunity(
+    *,
+    context: TaskContext,
+    mode: InteractionMode,
+    candidate_concepts: Iterable[str],
+    silently_faded_concepts: Iterable[str] = (),
+) -> TriggerResult:
+    """Select zero or one learning point before deep learning-only research.
 
-    RepoLearn is intentionally conservative: state awareness may be mandatory for
-    a client integration, but teaching is conditional. Mechanical, urgent,
-    exact-machine-output, already-revealed, or non-meaningful work stays silent.
-    Observe mode is also silent by design.
+    Explicit repository/user activation accepts one low-cost interruption when a
+    qualifying architecture concept exists. Automatic discovery is deliberately
+    stricter and requires the caller to mark the task eligible. Current bounded
+    state may suppress a concept only when it explicitly supports silent cue
+    fading; chat memory alone must not be translated into this set.
     """
 
     if mode is InteractionMode.OBSERVE:
@@ -95,13 +103,29 @@ def select_learning_opportunity(*, context: TaskContext, mode: InteractionMode, 
         if suppressed:
             return TriggerResult(TriggerDisposition.NO_TRIGGER, reason=reason)
 
+    if (
+        context.activation_source is ActivationSource.AUTO_DISCOVERY
+        and not context.automatic_discovery_trigger_eligible
+    ):
+        return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="auto_discovery_not_eligible")
+
+    faded = {concept.strip() for concept in silently_faded_concepts if concept.strip()}
+    saw_candidate = False
+    saw_faded_candidate = False
     for concept in candidate_concepts:
         normalized = concept.strip()
-        if normalized:
-            return TriggerResult(
-                TriggerDisposition.LEARNING_OPPORTUNITY,
-                opportunities=(LearningOpportunity(normalized),),
-                reason="high_value_candidate",
-            )
+        if not normalized:
+            continue
+        saw_candidate = True
+        if normalized in faded:
+            saw_faded_candidate = True
+            continue
+        return TriggerResult(
+            TriggerDisposition.LEARNING_OPPORTUNITY,
+            opportunities=(LearningOpportunity(normalized),),
+            reason="high_value_candidate",
+        )
 
+    if saw_candidate and saw_faded_candidate:
+        return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="cue_faded")
     return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="no_candidate")
