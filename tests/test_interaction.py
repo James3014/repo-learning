@@ -4,6 +4,8 @@ import pytest
 
 from repolearn import (
     ActivationSource,
+    CONTRACT_CONTENT_SHA256,
+    CONTRACT_REVISION,
     GuidedBranch,
     InteractionDefect,
     InteractionObservationReceipt,
@@ -99,6 +101,8 @@ def receipt(**changes) -> InteractionObservationReceipt:
         "response_present": False,
         "response_relevance": ResponseRelevance.UNKNOWN,
         "engineering_blocked": False,
+        "contract_revision": CONTRACT_REVISION,
+        "contract_content_sha256": CONTRACT_CONTENT_SHA256,
         "cue_fading_suppressed": False,
         "cue_level": "LIGHT",
         "transfer_distance": "SAME_STRUCTURE",
