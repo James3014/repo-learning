@@ -18,7 +18,10 @@
         "repository": {"type": "string", "minLength": 1},
         "revision": {"type": ["string", "null"]},
         "task_ref": {"type": ["string", "null"]},
-        "workspace_boundary": {"type": ["string", "null"]}
+        "workspace_boundary": {"type": ["string", "null"]},
+        "activation_source": {
+          "enum": ["repository_pointer", "explicit_invocation", "auto_discovery", null]
+        }
       }
     },
     "capability": {
@@ -40,7 +43,13 @@
         "transfer_distance": {"enum": ["SAME_STRUCTURE", "NEAR_TRANSFER", "FAR_TRANSFER"]},
         "delay": {"type": ["string", "null"]},
         "user_attempted": {"type": "boolean", "default": true},
-        "ai_explanation_only": {"type": "boolean", "default": false}
+        "ai_explanation_only": {"type": "boolean", "default": false},
+        "evidence_timing": {"enum": ["PRE_EVIDENCE", "POST_EVIDENCE"], "default": "PRE_EVIDENCE"},
+        "evidence_provenance": {
+          "enum": ["USER_AUTHORED", "AI_REFORMULATED", "AI_EXPLANATION"],
+          "default": "USER_AUTHORED"
+        },
+        "silent_cue_fading_eligible": {"type": "boolean", "default": false}
       }
     },
     "evidence": {
@@ -63,7 +72,9 @@
         "classification": {"type": "string", "minLength": 1},
         "recommended_level": {"enum": ["UNASSESSED", "L0", "L1", "L2", "L3", "L4"]},
         "rationale": {"type": "string"},
-        "mastery_effect": {"type": "string", "default": "EVIDENCE_ONLY"}
+        "mastery_effect": {"type": "string", "default": "EVIDENCE_ONLY"},
+        "requires_reassessment": {"type": "boolean", "default": false},
+        "reassessment_of_event_id": {"type": ["string", "null"], "minLength": 1}
       }
     },
     "learning": {
