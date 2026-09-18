@@ -61,7 +61,6 @@ def test_auto_discovery_is_stricter_than_explicit_activation():
         context=TaskContext(activation_source=ActivationSource.AUTO_DISCOVERY),
         mode=InteractionMode.GUIDED,
         candidate_concepts=["authority boundary"],
-        now=datetime(2026, 10, 1, tzinfo=timezone.utc),
     )
     explicit = select_learning_opportunity(
         context=TaskContext(activation_source=ActivationSource.EXPLICIT_INVOCATION),
@@ -111,6 +110,7 @@ def test_bounded_state_can_suppress_silent_cue_faded_concept():
         context=TaskContext(),
         mode=InteractionMode.GUIDED,
         candidate_concepts=["authority boundary"],
+        now=datetime(2026, 10, 1, tzinfo=timezone.utc),
     )
     assert decision.trigger.disposition is TriggerDisposition.NO_TRIGGER
     assert decision.trigger.reason == "cue_faded"
