@@ -26,7 +26,17 @@ from .client import (
     classify_learning_response,
     prepare_learning_decision,
 )
+from .cue_policy import (
+    AttemptIndependence,
+    FADING_VALIDITY_DAYS,
+    MIN_FADING_DELAY_HOURS,
+    FadingDecision,
+    derive_fading_decision,
+    fading_is_current,
+)
+from .host_eval import compute_skill_content_sha256, hash_user_visible_trace
 from .interaction import (
+    EvaluationSource,
     GuidedBranch,
     InteractionDefect,
     InteractionObservationReceipt,
@@ -45,16 +55,25 @@ from .triggers import (
     TriggerResult,
     select_learning_opportunity,
 )
+from .version import CONTRACT_CONTENT_SHA256, CONTRACT_CONTROL_FILES, CONTRACT_REVISION
 
 __all__ = [
     "ActivationSource",
     "AssessmentClassification",
     "AssessmentResult",
+    "AttemptIndependence",
     "BackendConflictError",
+    "CONTRACT_CONTENT_SHA256",
+    "CONTRACT_CONTROL_FILES",
+    "CONTRACT_REVISION",
     "ClientLearningDecision",
     "CueLevel",
+    "EvaluationSource",
     "EvidenceProvenance",
     "EvidenceTiming",
+    "FADING_VALIDITY_DAYS",
+    "MIN_FADING_DELAY_HOURS",
+    "FadingDecision",
     "GuidedBranch",
     "InteractionDefect",
     "InteractionMode",
@@ -80,6 +99,10 @@ __all__ = [
     "UserJudgmentSignal",
     "assess_judgment",
     "classify_learning_response",
+    "compute_skill_content_sha256",
+    "derive_fading_decision",
+    "fading_is_current",
+    "hash_user_visible_trace",
     "prepare_learning_decision",
     "select_guided_branch",
     "select_learning_opportunity",

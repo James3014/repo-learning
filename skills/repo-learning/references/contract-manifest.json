@@ -1,0 +1,10 @@
+{
+  "contract_revision": "g5-runtime-evidence-v1",
+  "content_sha256": "57c2dd82c3f04125fb487d31df8bfc1f2ed9f3e73b5599f726a4608e0a529202",
+  "fingerprint_scope": [
+    "SKILL.md",
+    "agents/openai.yaml",
+    "references/policy.md",
+    "references/state-contract.md"
+  ]
+}

@@ -4,22 +4,62 @@
   "title": "repolearn.learning_state.v1",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "profile_id", "updated_at", "domains", "source"],
+  "required": [
+    "schema",
+    "profile_id",
+    "updated_at",
+    "domains",
+    "source"
+  ],
   "properties": {
-    "schema": {"const": "repolearn.learning_state.v1"},
-    "profile_id": {"type": "string", "minLength": 1},
-    "updated_at": {"type": "string", "format": "date-time"},
+    "schema": {
+      "const": "repolearn.learning_state.v1"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
     "domains": {
       "type": "object",
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["level", "evidence_count"],
+        "required": [
+          "level",
+          "evidence_count"
+        ],
         "properties": {
-          "level": {"enum": ["UNASSESSED", "L0", "L1", "L2", "L3", "L4"]},
-          "evidence_count": {"type": "integer", "minimum": 0},
-          "last_event_id": {"type": ["string", "null"]},
-          "last_observed_at": {"type": ["string", "null"], "format": "date-time"}
+          "level": {
+            "enum": [
+              "UNASSESSED",
+              "L0",
+              "L1",
+              "L2",
+              "L3",
+              "L4"
+            ]
+          },
+          "evidence_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_event_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_observed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
         }
       }
     },
@@ -28,14 +68,69 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["level", "evidence_count", "last_cue_level", "silent_cue_fading_eligible"],
+        "required": [
+          "level",
+          "evidence_count",
+          "last_cue_level",
+          "silent_cue_fading_eligible"
+        ],
         "properties": {
-          "level": {"enum": ["UNASSESSED", "L0", "L1", "L2", "L3", "L4"]},
-          "evidence_count": {"type": "integer", "minimum": 0},
-          "last_event_id": {"type": ["string", "null"]},
-          "last_observed_at": {"type": ["string", "null"], "format": "date-time"},
-          "last_cue_level": {"type": ["string", "null"], "enum": ["NONE", "LIGHT", "HEAVY", null]},
-          "silent_cue_fading_eligible": {"type": "boolean"}
+          "level": {
+            "enum": [
+              "UNASSESSED",
+              "L0",
+              "L1",
+              "L2",
+              "L3",
+              "L4"
+            ]
+          },
+          "evidence_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "last_event_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_observed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "last_cue_level": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "NONE",
+              "LIGHT",
+              "HEAVY",
+              null
+            ]
+          },
+          "silent_cue_fading_eligible": {
+            "type": "boolean",
+            "description": "Derived compatibility summary; event flags do not directly control this value."
+          },
+          "fading_valid_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "fading_basis_event_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
         }
       },
       "default": {}
@@ -45,11 +140,25 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["concept", "prefer_natural_case"],
+        "required": [
+          "concept",
+          "prefer_natural_case"
+        ],
         "properties": {
-          "concept": {"type": "string", "minLength": 1},
-          "prefer_natural_case": {"type": "boolean"},
-          "earliest_after": {"type": ["string", "null"], "format": "date-time"}
+          "concept": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prefer_natural_case": {
+            "type": "boolean"
+          },
+          "earliest_after": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
         }
       },
       "default": []
@@ -57,11 +166,27 @@
     "source": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["backend"],
+      "required": [
+        "backend"
+      ],
       "properties": {
-        "backend": {"type": "string", "minLength": 1},
-        "revision": {"type": ["string", "null"]},
-        "content_hash": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"}
+        "backend": {
+          "type": "string",
+          "minLength": 1
+        },
+        "revision": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "content_hash": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
+        }
       }
     }
   }
