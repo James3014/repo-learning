@@ -23,6 +23,23 @@
         }
       }
     },
+    "concepts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["level", "evidence_count", "last_cue_level", "silent_cue_fading_eligible"],
+        "properties": {
+          "level": {"enum": ["UNASSESSED", "L0", "L1", "L2", "L3", "L4"]},
+          "evidence_count": {"type": "integer", "minimum": 0},
+          "last_event_id": {"type": ["string", "null"]},
+          "last_observed_at": {"type": ["string", "null"], "format": "date-time"},
+          "last_cue_level": {"type": ["string", "null"], "enum": ["NONE", "LIGHT", "HEAVY", null]},
+          "silent_cue_fading_eligible": {"type": "boolean"}
+        }
+      },
+      "default": {}
+    },
     "review_queue": {
       "type": "array",
       "items": {

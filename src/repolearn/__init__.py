@@ -4,6 +4,8 @@ from .assessment import (
     AssessmentClassification,
     AssessmentResult,
     CueLevel,
+    EvidenceProvenance,
+    EvidenceTiming,
     JudgmentEvidence,
     MasteryLevel,
     TransferDistance,
@@ -24,8 +26,18 @@ from .client import (
     classify_learning_response,
     prepare_learning_decision,
 )
+from .interaction import (
+    GuidedBranch,
+    InteractionDefect,
+    InteractionObservationReceipt,
+    PromptDeliveryObservation,
+    ResponseRelevance,
+    UserJudgmentSignal,
+    select_guided_branch,
+)
 from .state import StateBackend, StateUnavailableError
 from .triggers import (
+    ActivationSource,
     InteractionMode,
     LearningOpportunity,
     TaskContext,
@@ -35,12 +47,18 @@ from .triggers import (
 )
 
 __all__ = [
+    "ActivationSource",
     "AssessmentClassification",
     "AssessmentResult",
     "BackendConflictError",
     "ClientLearningDecision",
     "CueLevel",
+    "EvidenceProvenance",
+    "EvidenceTiming",
+    "GuidedBranch",
+    "InteractionDefect",
     "InteractionMode",
+    "InteractionObservationReceipt",
     "JudgmentEvidence",
     "LearningOpportunity",
     "LearningResponseDisposition",
@@ -49,7 +67,9 @@ __all__ = [
     "MasteryLevel",
     "NexusLedgerBackend",
     "ProjectionConflictError",
+    "PromptDeliveryObservation",
     "ReadOnlyCanonicalBackendError",
+    "ResponseRelevance",
     "StaleProjectionError",
     "StateBackend",
     "StateUnavailableError",
@@ -57,8 +77,10 @@ __all__ = [
     "TransferDistance",
     "TriggerDisposition",
     "TriggerResult",
+    "UserJudgmentSignal",
     "assess_judgment",
     "classify_learning_response",
     "prepare_learning_decision",
+    "select_guided_branch",
     "select_learning_opportunity",
 ]

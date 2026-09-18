@@ -178,31 +178,151 @@ class LocalFileBackend(StateBackend):
 
     def refresh_projection(self, profile_id: str) -> Mapping[str, Any]:
         events = self._read_events(profile_id)
-        domains: dict[str, dict[str, Any]] = {}
-        latest_observed = "1970-01-01T00:00:00Z"
-        for event in events:
-            domain = event.get("capability", {}).get("domain")
-            level = event.get("assessment", {}).get("recommended_level")
-            observed_at = event.get("observed_at")
+
+        event_positions: dict[str, int] = {}
+        for index, event in enumerate(events):
             event_id = event.get("event_id")
-            if not isinstance(domain, str) or level not in _LEVEL_ORDER:
+            if isinstance(event_id, str):
+                event_positions[event_id] = index
+
+        reassessment_targets: dict[str, str] = {}
+        for index, event in enumerate(events):
+            assessment = event.get("assessment", {})
+            target = assessment.get("reassessment_of_event_id") if isinstance(assessment, Mapping) else None
+            if not isinstance(target, str):
                 continue
-            current = domains.setdefault(
-                domain,
-                {"level": "UNASSESSED", "evidence_count": 0, "last_event_id": None, "last_observed_at": None},
-            )
-            current["evidence_count"] += 1
+            if target not in event_positions or event_positions[target] >= index:
+                raise ProjectionConflictError(
+                    f"reassessment target {target!r} must reference an earlier event"
+                )
+            target_event = events[event_positions[target]]
+            target_capability = target_event.get("capability", {})
+            resolver_capability = event.get("capability", {})
+            if (
+                not isinstance(target_capability, Mapping)
+                or not isinstance(resolver_capability, Mapping)
+                or target_capability.get("domain") != resolver_capability.get("domain")
+                or target_capability.get("concept") != resolver_capability.get("concept")
+            ):
+                raise ProjectionConflictError(
+                    f"reassessment target {target!r} must resolve the same domain/concept"
+                )
+            resolver_id = event.get("event_id")
+            if target in reassessment_targets:
+                raise ProjectionConflictError(
+                    f"reassessment target {target!r} has multiple resolutions"
+                )
+            reassessment_targets[target] = str(resolver_id)
+
+        domains: dict[str, dict[str, Any]] = {}
+        concepts: dict[str, dict[str, Any]] = {}
+        latest_observed = "1970-01-01T00:00:00Z"
+
+        def apply_level(
+            current: dict[str, Any],
+            *,
+            level: str,
+            event_id: str | None,
+            observed_at: str | None,
+            is_resolution: bool,
+            conflict_has_resolution: bool,
+            label: str,
+        ) -> None:
             if level != "UNASSESSED":
                 settled_level = current["level"]
                 if settled_level != "UNASSESSED" and _LEVEL_ORDER[level] < _LEVEL_ORDER[settled_level]:
-                    raise ProjectionConflictError(
-                        f"assessed level regression for {domain!r} from {settled_level} to {level} "
-                        "requires explicit reassessment before projection"
-                    )
-                current["level"] = level
-            if isinstance(observed_at, str) and (current["last_observed_at"] is None or observed_at >= current["last_observed_at"]):
+                    if is_resolution:
+                        current["level"] = level
+                    elif conflict_has_resolution:
+                        pass
+                    else:
+                        raise ProjectionConflictError(
+                            f"assessed level regression for {label!r} from {settled_level} to {level} "
+                            "requires explicit reassessment before projection"
+                        )
+                else:
+                    current["level"] = level
+            if isinstance(observed_at, str) and (
+                current["last_observed_at"] is None or observed_at >= current["last_observed_at"]
+            ):
                 current["last_event_id"] = event_id
                 current["last_observed_at"] = observed_at
+
+        for event in events:
+            capability = event.get("capability", {})
+            assessment = event.get("assessment", {})
+            attempt = event.get("attempt", {})
+            domain = capability.get("domain") if isinstance(capability, Mapping) else None
+            concept = capability.get("concept") if isinstance(capability, Mapping) else None
+            level = assessment.get("recommended_level") if isinstance(assessment, Mapping) else None
+            observed_at = event.get("observed_at")
+            event_id = event.get("event_id")
+            reassessment_of = (
+                assessment.get("reassessment_of_event_id")
+                if isinstance(assessment, Mapping)
+                else None
+            )
+            is_resolution = isinstance(reassessment_of, str)
+            conflict_has_resolution = (
+                isinstance(event_id, str) and event_id in reassessment_targets
+            )
+
+            if isinstance(domain, str) and level in _LEVEL_ORDER:
+                current = domains.setdefault(
+                    domain,
+                    {
+                        "level": "UNASSESSED",
+                        "evidence_count": 0,
+                        "last_event_id": None,
+                        "last_observed_at": None,
+                    },
+                )
+                current["evidence_count"] += 1
+                apply_level(
+                    current,
+                    level=level,
+                    event_id=event_id if isinstance(event_id, str) else None,
+                    observed_at=observed_at if isinstance(observed_at, str) else None,
+                    is_resolution=is_resolution,
+                    conflict_has_resolution=conflict_has_resolution,
+                    label=domain,
+                )
+
+            if isinstance(concept, str) and level in _LEVEL_ORDER:
+                current_concept = concepts.setdefault(
+                    concept,
+                    {
+                        "level": "UNASSESSED",
+                        "evidence_count": 0,
+                        "last_event_id": None,
+                        "last_observed_at": None,
+                        "last_cue_level": None,
+                        "silent_cue_fading_eligible": False,
+                    },
+                )
+                current_concept["evidence_count"] += 1
+                previous_observed = current_concept["last_observed_at"]
+                apply_level(
+                    current_concept,
+                    level=level,
+                    event_id=event_id if isinstance(event_id, str) else None,
+                    observed_at=observed_at if isinstance(observed_at, str) else None,
+                    is_resolution=is_resolution,
+                    conflict_has_resolution=conflict_has_resolution,
+                    label=concept,
+                )
+                is_latest = (
+                    isinstance(observed_at, str)
+                    and (previous_observed is None or observed_at >= previous_observed)
+                )
+                if is_latest and isinstance(attempt, Mapping):
+                    cue_level = attempt.get("cue_level")
+                    if cue_level in {"NONE", "LIGHT", "HEAVY"}:
+                        current_concept["last_cue_level"] = cue_level
+                    current_concept["silent_cue_fading_eligible"] = bool(
+                        attempt.get("silent_cue_fading_eligible", False)
+                    )
+
             if isinstance(observed_at, str) and observed_at > latest_observed:
                 latest_observed = observed_at
 
@@ -213,6 +333,7 @@ class LocalFileBackend(StateBackend):
             "profile_id": profile_id,
             "updated_at": latest_observed,
             "domains": domains,
+            "concepts": concepts,
             "review_queue": [],
             "source": {
                 "backend": "local-file",
@@ -222,6 +343,56 @@ class LocalFileBackend(StateBackend):
         }
         self._atomic_write_state(self._state_path(profile_id), state)
         return state
+
+    def resolve_reassessment(
+        self,
+        profile_id: str,
+        *,
+        conflict_event_id: str,
+        resolution_event: Mapping[str, Any],
+    ) -> Mapping[str, Any]:
+        """Append an explicit reassessment resolution and rebuild projection.
+
+        This provides a deterministic append-only recovery path for a previously
+        appended contradictory event. The resolution event must have its own
+        stable event_id and recommended_level; this method binds it to the exact
+        conflicting event before append.
+        """
+
+        events = self._read_events(profile_id)
+        target_event = next(
+            (event for event in events if event.get("event_id") == conflict_event_id),
+            None,
+        )
+        if target_event is None:
+            raise ValueError("conflict_event_id does not exist")
+        if any(
+            isinstance(event.get("assessment"), Mapping)
+            and event["assessment"].get("reassessment_of_event_id") == conflict_event_id
+            for event in events
+        ):
+            raise ProjectionConflictError("conflict event already has a reassessment resolution")
+
+        target_capability = target_event.get("capability", {})
+        resolver_capability = resolution_event.get("capability", {})
+        if (
+            not isinstance(target_capability, Mapping)
+            or not isinstance(resolver_capability, Mapping)
+            or target_capability.get("domain") != resolver_capability.get("domain")
+            or target_capability.get("concept") != resolver_capability.get("concept")
+        ):
+            raise ProjectionConflictError(
+                "reassessment resolution must match the conflict event domain/concept"
+            )
+
+        payload = dict(resolution_event)
+        assessment = dict(payload.get("assessment") or {})
+        if assessment.get("recommended_level") not in _LEVEL_ORDER:
+            raise ValueError("reassessment resolution requires a valid recommended_level")
+        assessment["reassessment_of_event_id"] = conflict_event_id
+        payload["assessment"] = assessment
+        self.append_learning_event(profile_id, payload)
+        return self.refresh_projection(profile_id)
 
     def read_related_history(
         self,
@@ -339,6 +510,7 @@ class NexusLedgerBackend(StateBackend):
             "profile_id": profile_id,
             "updated_at": updated_at,
             "domains": domains,
+            "concepts": {},
             "review_queue": [],
             "source": {
                 "backend": "nexus-ledger-readthrough",
