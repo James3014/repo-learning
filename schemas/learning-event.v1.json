@@ -163,7 +163,7 @@
           ],
           "minimum": 0,
           "default": null,
-          "description": "Elapsed hours before this attempt relative to the prior relevant learning exposure."
+          "description": "Reported elapsed hours for diagnostics. Cue policy verifies delay from durable event timestamps and does not trust this field as authority."
         }
       }
     },
