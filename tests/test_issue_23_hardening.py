@@ -9,6 +9,7 @@ import pytest
 from repolearn import (
     ActivationSource,
     AttemptIndependence,
+    CONTRACT_CONTENT_SHA256,
     CONTRACT_REVISION,
     EvaluationSource,
     GuidedBranch,
@@ -84,7 +85,7 @@ def receipt(**changes) -> InteractionObservationReceipt:
         "response_relevance": ResponseRelevance.UNKNOWN,
         "engineering_blocked": False,
         "contract_revision": CONTRACT_REVISION,
-        "contract_content_sha256": "a" * 64,
+        "contract_content_sha256": CONTRACT_CONTENT_SHA256,
         "trace_sha256": "b" * 64,
         "evaluation_source": EvaluationSource.HUMAN,
         "evaluator_id": "reviewer-1",
@@ -130,7 +131,7 @@ def test_self_reported_receipt_cannot_be_independent_g5_evidence():
         evaluator_id=None,
     )
     assert not observed.qualifies_for_independent_g5_evidence(
-        expected_content_sha256="a" * 64
+        expected_content_sha256=CONTRACT_CONTENT_SHA256
     )
 
 
@@ -142,6 +143,13 @@ def test_independent_receipt_requires_matching_loaded_contract():
     assert not observed.attestation_matches(
         expected_content_sha256="c" * 64
     )
+
+
+def test_contract_content_hash_mismatch_or_missing_is_observable_defect():
+    mismatched = receipt(contract_content_sha256="c" * 64)
+    missing = receipt(contract_content_sha256=None)
+    assert InteractionDefect.CONTRACT_ATTESTATION_DEFECT in mismatched.interaction_defects
+    assert InteractionDefect.CONTRACT_ATTESTATION_DEFECT in missing.interaction_defects
 
 
 def test_contract_revision_mismatch_is_observable_defect():
