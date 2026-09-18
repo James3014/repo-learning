@@ -103,6 +103,7 @@ def receipt(**changes) -> InteractionObservationReceipt:
 def test_contract_manifest_matches_python_revision_and_skill_fingerprint():
     manifest = json.loads((SKILL_ROOT / "references" / "contract-manifest.json").read_text())
     assert manifest["contract_revision"] == CONTRACT_REVISION
+    assert manifest["content_sha256"] == CONTRACT_CONTENT_SHA256
     assert manifest["content_sha256"] == compute_skill_content_sha256(SKILL_ROOT)
 
 
