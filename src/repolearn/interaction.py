@@ -132,6 +132,7 @@ class InteractionObservationReceipt:
     contract_content_sha256: str | None = None
     trace_sha256: str | None = None
     evaluation_source: EvaluationSource = EvaluationSource.SELF_REPORTED
+    generator_id: str | None = None
     evaluator_id: str | None = None
     natural_task: bool = False
     added_turns: int = 0
@@ -160,6 +161,12 @@ class InteractionObservationReceipt:
         if self.evaluation_source is not EvaluationSource.SELF_REPORTED:
             if not self.evaluator_id or not self.evaluator_id.strip():
                 raise ValueError("independent/deterministic evaluation requires evaluator_id")
+        if (
+            self.evaluation_source is EvaluationSource.INDEPENDENT_LLM
+            and self.generator_id is not None
+            and self.evaluator_id == self.generator_id
+        ):
+            raise ValueError("independent LLM evaluator must differ from generator_id")
         if self.trigger_selected and self.selected_branch is not None:
             expected_branch = (
                 GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
@@ -221,6 +228,11 @@ class InteractionObservationReceipt:
             and self.evaluation_source
             in {EvaluationSource.DETERMINISTIC, EvaluationSource.INDEPENDENT_LLM, EvaluationSource.HUMAN}
             and self.evaluator_id
+            and (
+                self.evaluation_source is not EvaluationSource.INDEPENDENT_LLM
+                or self.generator_id is None
+                or self.evaluator_id != self.generator_id
+            )
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -252,6 +264,7 @@ class InteractionObservationReceipt:
             "contract_content_sha256": self.contract_content_sha256,
             "trace_sha256": self.trace_sha256,
             "evaluation_source": self.evaluation_source.value,
+            "generator_id": self.generator_id,
             "evaluator_id": self.evaluator_id,
             "natural_task": self.natural_task,
             "added_turns": self.added_turns,
