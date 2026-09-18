@@ -107,14 +107,14 @@ def test_contract_manifest_matches_python_revision_and_skill_fingerprint():
 
 def test_trace_hash_binds_exact_visible_interaction_without_persisting_text():
     first = hash_user_visible_trace(
-        user_message="problem",
+        user_message="TOP-SECRET-USER-TEXT",
         progress_messages=("checking source",),
-        final_response="answer",
+        final_response="TOP-SECRET-FINAL-TEXT",
     )
     second = hash_user_visible_trace(
-        user_message="problem",
+        user_message="TOP-SECRET-USER-TEXT",
         progress_messages=("checking source",),
-        final_response="different answer",
+        final_response="DIFFERENT-FINAL-TEXT",
     )
     assert len(first) == 64
     assert first != second
