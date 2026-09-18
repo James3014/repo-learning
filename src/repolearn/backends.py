@@ -195,6 +195,18 @@ class LocalFileBackend(StateBackend):
                 raise ProjectionConflictError(
                     f"reassessment target {target!r} must reference an earlier event"
                 )
+            target_event = events[event_positions[target]]
+            target_capability = target_event.get("capability", {})
+            resolver_capability = event.get("capability", {})
+            if (
+                not isinstance(target_capability, Mapping)
+                or not isinstance(resolver_capability, Mapping)
+                or target_capability.get("domain") != resolver_capability.get("domain")
+                or target_capability.get("concept") != resolver_capability.get("concept")
+            ):
+                raise ProjectionConflictError(
+                    f"reassessment target {target!r} must resolve the same domain/concept"
+                )
             resolver_id = event.get("event_id")
             if target in reassessment_targets:
                 raise ProjectionConflictError(
