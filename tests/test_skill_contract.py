@@ -75,6 +75,20 @@ def test_prompt_visibility_defect_is_not_user_skip_or_regression():
     assert "rather than user failure, skip/no-response, or mastery regression" in POLICY
 
 
+def test_guided_prompt_must_precede_answer_revealing_content():
+    assert "place the judgment question before the first substantive recommendation, conclusion, or decisive evidence" in SKILL
+    assert "Perform a pre-evidence ordering check before sending" in SKILL
+    assert "judgment question must appear before the first substantive recommendation, conclusion, or decisive evidence" in POLICY
+    assert "perform a pre-evidence ordering check" in POLICY
+
+
+def test_pre_evidence_ordering_defect_is_not_user_skip_or_regression():
+    assert "pre-evidence-ordering defect, not `skip/no-response`" in SKILL
+    assert "Pre-evidence ordering is part of the interaction contract as well" in POLICY
+    assert "classify the interaction as a pre-evidence-ordering defect" in POLICY
+    assert "post-evidence agreement and cannot be promoted to pre-evidence mastery evidence" in POLICY
+
+
 def test_spontaneous_judgment_capture_does_not_requiz():
     assert "Do not re-ask the judgment" in SKILL
     assert "give bounded feedback on the reasoning rather than mere agreement" in SKILL
