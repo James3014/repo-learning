@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -60,6 +61,7 @@ def test_auto_discovery_is_stricter_than_explicit_activation():
         context=TaskContext(activation_source=ActivationSource.AUTO_DISCOVERY),
         mode=InteractionMode.GUIDED,
         candidate_concepts=["authority boundary"],
+        now=datetime(2026, 10, 1, tzinfo=timezone.utc),
     )
     explicit = select_learning_opportunity(
         context=TaskContext(activation_source=ActivationSource.EXPLICIT_INVOCATION),
@@ -97,6 +99,8 @@ def test_bounded_state_can_suppress_silent_cue_faded_concept():
                 "last_observed_at": "2026-09-18T00:00:00Z",
                 "last_cue_level": "NONE",
                 "silent_cue_fading_eligible": True,
+                "fading_valid_until": "2026-10-18T00:00:00Z",
+                "fading_basis_event_id": "ev-3",
             }
         },
         "source": {"backend": "fixture"},
@@ -253,10 +257,12 @@ def learning_event(event_id, level, observed_at, *, silent=False, concept="singl
             "transfer_distance": "NEAR_TRANSFER",
             "evidence_timing": "PRE_EVIDENCE",
             "evidence_provenance": "USER_AUTHORED",
+            "independence": "INDEPENDENT" if silent else "GUIDED",
+            "delay_hours": 24 if silent else 0,
             "silent_cue_fading_eligible": silent,
         },
         "assessment": {
-            "classification": "EXPLAINED_WITH_EVIDENCE",
+            "classification": "TRANSFER_WITH_TRADEOFFS" if silent else "EXPLAINED_WITH_EVIDENCE",
             "recommended_level": level,
             "rationale": "bounded fixture",
             "requires_reassessment": False,
@@ -381,7 +387,19 @@ def test_interaction_observation_schema_accepts_bounded_receipt():
             "response_relevance": "UNKNOWN",
             "engineering_blocked": False,
             "interaction_defect": "NONE",
+            "interaction_defects": [],
             "cue_fading_suppressed": False,
+            "contract_revision": "g5-runtime-evidence-v1",
+            "contract_content_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "trace_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            "evaluation_source": "SELF_REPORTED",
+            "evaluator_id": None,
+            "natural_task": True,
+            "added_turns": 0,
+            "added_time_ms_estimate": None,
+            "added_context_tokens_estimate": None,
+            "user_language": "en",
+            "language_alignment_valid": True,
             "cue_level": "LIGHT",
             "transfer_distance": "SAME_STRUCTURE",
         }
