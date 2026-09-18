@@ -32,14 +32,27 @@ class TransferDistance(str, Enum):
     FAR_TRANSFER = "FAR_TRANSFER"
 
 
+class EvidenceTiming(str, Enum):
+    PRE_EVIDENCE = "PRE_EVIDENCE"
+    POST_EVIDENCE = "POST_EVIDENCE"
+
+
+class EvidenceProvenance(str, Enum):
+    USER_AUTHORED = "USER_AUTHORED"
+    AI_REFORMULATED = "AI_REFORMULATED"
+    AI_EXPLANATION = "AI_EXPLANATION"
+
+
 class AssessmentClassification(str, Enum):
     UNASSESSED = "UNASSESSED"
     EXPLICIT_NOT_YET_ENCOUNTERED = "EXPLICIT_NOT_YET_ENCOUNTERED"
     EXPOSURE_ONLY = "EXPOSURE_ONLY"
+    POST_EVIDENCE_AGREEMENT = "POST_EVIDENCE_AGREEMENT"
     USER_ATTEMPT = "USER_ATTEMPT"
     EXPLAINED_WITH_EVIDENCE = "EXPLAINED_WITH_EVIDENCE"
     TRANSFER_WITH_TRADEOFFS = "TRANSFER_WITH_TRADEOFFS"
     INDEPENDENT_FALSIFIER = "INDEPENDENT_FALSIFIER"
+    REASSESSMENT_REQUIRED = "REASSESSMENT_REQUIRED"
 
 
 MASTERY_LEVEL_IS_CALIBRATED_PSYCHOMETRIC_SCALE = False
@@ -63,6 +76,7 @@ class JudgmentEvidence:
     trade_offs: tuple[str, ...] = ()
     evidence: tuple[str, ...] = ()
     falsifier: str | None = None
+    provenance: EvidenceProvenance = EvidenceProvenance.USER_AUTHORED
 
     @property
     def supports_explanation(self) -> bool:
@@ -87,6 +101,7 @@ class AssessmentResult:
     transfer_distance: TransferDistance
     delay: str | None
     rationale: str
+    requires_reassessment: bool = False
 
 
 def _higher(left: MasteryLevel, right: MasteryLevel) -> MasteryLevel:
@@ -103,14 +118,15 @@ def assess_judgment(
     transfer_distance: TransferDistance = TransferDistance.SAME_STRUCTURE,
     delay: str | None = None,
     explicit_not_yet_encountered: bool = False,
+    evidence_timing: EvidenceTiming = EvidenceTiming.PRE_EVIDENCE,
+    contradicts_prior: bool = False,
 ) -> AssessmentResult:
     """Return a conservative evidence recommendation.
 
-    ``current_level=None`` means state is unavailable or no assessment exists and
-    maps to ``UNASSESSED`` -- never to L0. ``delay`` is retained as observation
-    metadata but never changes the recommendation by itself. Agreement with an AI
-    answer is intentionally not an input: architecture quality is judged from the
-    user's goals, constraints, alternatives, trade-offs, evidence and falsifier.
+    Only user-authored, pre-evidence reasoning can promote mastery. AI
+    reformulation and post-evidence agreement remain exposure. A weaker attempt
+    does not regress prior mastery, while explicitly contradictory weaker
+    evidence is surfaced as REASSESSMENT_REQUIRED rather than silently resolved.
     """
 
     prior = current_level or MasteryLevel.UNASSESSED
@@ -128,16 +144,47 @@ def assess_judgment(
             rationale="Explicit evidence says the concept has not yet been encountered.",
         )
 
-    if not user_attempted or ai_explanation_only:
+    if not user_attempted:
         return AssessmentResult(
             prior_level=prior,
             evidence_ceiling=MasteryLevel.UNASSESSED,
             recommended_level=prior,
-            classification=(AssessmentClassification.EXPOSURE_ONLY if ai_explanation_only else AssessmentClassification.UNASSESSED),
+            classification=(
+                AssessmentClassification.EXPOSURE_ONLY
+                if ai_explanation_only
+                else AssessmentClassification.UNASSESSED
+            ),
             cue_level=cue_level,
             transfer_distance=transfer_distance,
             delay=delay,
-            rationale="Exposure or AI explanation is not evidence of user mastery.",
+            rationale="No assessable user attempt was provided.",
+        )
+
+    if (
+        ai_explanation_only
+        or evidence.provenance is not EvidenceProvenance.USER_AUTHORED
+    ):
+        return AssessmentResult(
+            prior_level=prior,
+            evidence_ceiling=MasteryLevel.UNASSESSED,
+            recommended_level=prior,
+            classification=AssessmentClassification.EXPOSURE_ONLY,
+            cue_level=cue_level,
+            transfer_distance=transfer_distance,
+            delay=delay,
+            rationale="AI explanation or reformulation is exposure, not user mastery evidence.",
+        )
+
+    if evidence_timing is EvidenceTiming.POST_EVIDENCE:
+        return AssessmentResult(
+            prior_level=prior,
+            evidence_ceiling=MasteryLevel.UNASSESSED,
+            recommended_level=prior,
+            classification=AssessmentClassification.POST_EVIDENCE_AGREEMENT,
+            cue_level=cue_level,
+            transfer_distance=transfer_distance,
+            delay=delay,
+            rationale="The user response followed decisive answer-revealing evidence.",
         )
 
     ceiling = MasteryLevel.L1
@@ -149,15 +196,41 @@ def assess_judgment(
         classification = AssessmentClassification.EXPLAINED_WITH_EVIDENCE
         rationale = "The attempt identifies goals, constraints and supporting evidence."
 
-    if evidence.supports_transfer and transfer_distance is not TransferDistance.SAME_STRUCTURE and cue_level is not CueLevel.HEAVY:
+    if (
+        evidence.supports_transfer
+        and transfer_distance is not TransferDistance.SAME_STRUCTURE
+        and cue_level is not CueLevel.HEAVY
+    ):
         ceiling = MasteryLevel.L3
         classification = AssessmentClassification.TRANSFER_WITH_TRADEOFFS
         rationale = "The attempt transfers with alternatives, trade-offs and evidence under limited cueing."
 
-    if ceiling is MasteryLevel.L3 and evidence.has_falsifier and transfer_distance is TransferDistance.FAR_TRANSFER and cue_level is CueLevel.NONE:
+    if (
+        ceiling is MasteryLevel.L3
+        and evidence.has_falsifier
+        and transfer_distance is TransferDistance.FAR_TRANSFER
+        and cue_level is CueLevel.NONE
+    ):
         ceiling = MasteryLevel.L4
         classification = AssessmentClassification.INDEPENDENT_FALSIFIER
         rationale = "The attempt independently transfers and names evidence that would change the judgment."
+
+    if (
+        contradicts_prior
+        and prior is not MasteryLevel.UNASSESSED
+        and _LEVEL_ORDER[ceiling] < _LEVEL_ORDER[prior]
+    ):
+        return AssessmentResult(
+            prior_level=prior,
+            evidence_ceiling=ceiling,
+            recommended_level=prior,
+            classification=AssessmentClassification.REASSESSMENT_REQUIRED,
+            cue_level=cue_level,
+            transfer_distance=transfer_distance,
+            delay=delay,
+            rationale="Contradictory weaker evidence requires explicit reassessment.",
+            requires_reassessment=True,
+        )
 
     return AssessmentResult(
         prior_level=prior,
