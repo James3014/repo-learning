@@ -323,7 +323,20 @@ class LocalFileBackend(StateBackend):
                     if cue_level in {"NONE", "LIGHT", "HEAVY"}:
                         current_concept["last_cue_level"] = cue_level
 
-                fading = derive_fading_decision(event)
+                if is_resolution or (
+                    isinstance(assessment, Mapping)
+                    and assessment.get("requires_reassessment") is True
+                ):
+                    current_concept["silent_cue_fading_eligible"] = False
+                    current_concept["fading_valid_until"] = None
+                    current_concept["fading_basis_event_id"] = None
+
+                fading = derive_fading_decision(
+                    event,
+                    previous_observed_at=(
+                        previous_observed if isinstance(previous_observed, str) else None
+                    ),
+                )
                 if fading.eligible and (
                     current_concept["fading_valid_until"] is None
                     or str(fading.valid_until) >= str(current_concept["fading_valid_until"])
