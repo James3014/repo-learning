@@ -360,11 +360,35 @@ class LocalFileBackend(StateBackend):
         """
 
         events = self._read_events(profile_id)
-        if not any(event.get("event_id") == conflict_event_id for event in events):
+        target_event = next(
+            (event for event in events if event.get("event_id") == conflict_event_id),
+            None,
+        )
+        if target_event is None:
             raise ValueError("conflict_event_id does not exist")
+        if any(
+            isinstance(event.get("assessment"), Mapping)
+            and event["assessment"].get("reassessment_of_event_id") == conflict_event_id
+            for event in events
+        ):
+            raise ProjectionConflictError("conflict event already has a reassessment resolution")
+
+        target_capability = target_event.get("capability", {})
+        resolver_capability = resolution_event.get("capability", {})
+        if (
+            not isinstance(target_capability, Mapping)
+            or not isinstance(resolver_capability, Mapping)
+            or target_capability.get("domain") != resolver_capability.get("domain")
+            or target_capability.get("concept") != resolver_capability.get("concept")
+        ):
+            raise ProjectionConflictError(
+                "reassessment resolution must match the conflict event domain/concept"
+            )
 
         payload = dict(resolution_event)
         assessment = dict(payload.get("assessment") or {})
+        if assessment.get("recommended_level") not in _LEVEL_ORDER:
+            raise ValueError("reassessment resolution requires a valid recommended_level")
         assessment["reassessment_of_event_id"] = conflict_event_id
         payload["assessment"] = assessment
         self.append_learning_event(profile_id, payload)
