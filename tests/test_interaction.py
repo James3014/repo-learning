@@ -115,6 +115,14 @@ def test_false_spontaneous_branch_is_detected():
     assert observed.interaction_defect is InteractionDefect.GUIDED_BRANCH_SELECTION_DEFECT
 
 
+def test_missing_spontaneous_capture_is_detected_when_judgment_exists():
+    observed = receipt(
+        selected_branch=GuidedBranch.JUDGMENT_PROMPT,
+        spontaneous_judgment_present=True,
+    )
+    assert observed.interaction_defect is InteractionDefect.GUIDED_BRANCH_SELECTION_DEFECT
+
+
 def test_unknown_nonempty_response_is_observable_defect_not_mastery():
     observed = receipt(
         response_present=True,
