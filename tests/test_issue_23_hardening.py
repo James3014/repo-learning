@@ -245,13 +245,28 @@ def test_reassessment_or_ai_only_event_cannot_authorize_fading():
     )
 
 
-def test_independent_llm_evaluator_must_differ_from_generator():
+def test_independent_llm_evaluator_requires_generator_provenance_and_separation():
+    with pytest.raises(ValueError, match="requires generator_id"):
+        receipt(
+            evaluation_source=EvaluationSource.INDEPENDENT_LLM,
+            generator_id=None,
+            evaluator_id="model-b",
+        )
     with pytest.raises(ValueError, match="must differ"):
         receipt(
             evaluation_source=EvaluationSource.INDEPENDENT_LLM,
             generator_id="model-a",
             evaluator_id="model-a",
         )
+
+    independent = receipt(
+        evaluation_source=EvaluationSource.INDEPENDENT_LLM,
+        generator_id="model-a",
+        evaluator_id="model-b",
+    )
+    assert independent.qualifies_for_independent_g5_evidence(
+        expected_content_sha256=CONTRACT_CONTENT_SHA256
+    )
 
 
 def test_delayed_independent_transfer_derives_temporary_fading(tmp_path):
