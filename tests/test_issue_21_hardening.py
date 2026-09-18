@@ -317,7 +317,8 @@ def test_reassessment_resolution_cannot_cross_concept_boundary(tmp_path):
         learning_event("ev-2", "L2", "2026-09-16T00:00:00Z"),
     )
 
-    with pytest.raises(ProjectionConflictError, match="same domain/concept"):
+    before = backend.read_related_history("james")
+    with pytest.raises(ProjectionConflictError, match="domain/concept"):
         backend.resolve_reassessment(
             "james",
             conflict_event_id="ev-2",
@@ -328,6 +329,31 @@ def test_reassessment_resolution_cannot_cross_concept_boundary(tmp_path):
                 concept="different concept",
             ),
         )
+    assert backend.read_related_history("james") == before
+
+
+def test_invalid_reassessment_is_rejected_before_ledger_append(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event(
+        "james",
+        learning_event("ev-1", "L3", "2026-09-15T00:00:00Z"),
+    )
+    backend.refresh_projection("james")
+    backend.append_learning_event(
+        "james",
+        learning_event("ev-2", "L2", "2026-09-16T00:00:00Z"),
+    )
+    before = backend.read_related_history("james")
+    invalid = learning_event("ev-3", "L2", "2026-09-17T00:00:00Z")
+    invalid["assessment"]["recommended_level"] = "BROKEN"
+
+    with pytest.raises(ValueError, match="valid recommended_level"):
+        backend.resolve_reassessment(
+            "james",
+            conflict_event_id="ev-2",
+            resolution_event=invalid,
+        )
+    assert backend.read_related_history("james") == before
 
 
 def test_interaction_observation_schema_accepts_bounded_receipt():
