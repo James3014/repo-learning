@@ -60,6 +60,21 @@ def test_prompt_comprehension_defect_is_not_user_regression_or_skip():
     assert "rather than user failure, skip/no-response, or mastery regression" in POLICY
 
 
+def test_guided_prompt_must_remain_visible_in_final_response():
+    assert "counts as emitted only when that architecture question appears in the durable final user-visible assistant response" in SKILL
+    assert "transient progress/status messages do not satisfy this requirement" in SKILL
+    assert "include the single primary judgment question in the final response" in SKILL
+    assert "counts as emitted only if the architecture question appears in the durable final user-visible assistant response" in POLICY
+    assert "intermediate surface, include the single primary judgment question in the final response" in POLICY
+
+
+def test_prompt_visibility_defect_is_not_user_skip_or_regression():
+    assert "prompt-visibility defect, not `skip/no-response`" in SKILL
+    assert "Prompt visibility is also part of the interaction contract" in POLICY
+    assert "Classify that interaction as a prompt-visibility defect" in POLICY
+    assert "rather than user failure, skip/no-response, or mastery regression" in POLICY
+
+
 def test_spontaneous_judgment_capture_does_not_requiz():
     assert "Do not re-ask the judgment" in SKILL
     assert "give bounded feedback on the reasoning rather than mere agreement" in SKILL
