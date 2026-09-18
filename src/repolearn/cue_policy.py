@@ -61,6 +61,8 @@ def derive_fading_decision(event: Mapping[str, Any]) -> FadingDecision:
         return FadingDecision(False, reason="missing_attempt_or_assessment")
 
     checks = (
+        (attempt.get("user_attempted", True) is not False, "no_user_attempt"),
+        (attempt.get("ai_explanation_only", False) is not True, "ai_explanation_only"),
         (attempt.get("evidence_provenance") == "USER_AUTHORED", "not_user_authored"),
         (attempt.get("evidence_timing") == "PRE_EVIDENCE", "not_pre_evidence"),
         (attempt.get("independence") == AttemptIndependence.INDEPENDENT.value, "not_independent"),
@@ -75,6 +77,12 @@ def derive_fading_decision(event: Mapping[str, Any]) -> FadingDecision:
             assessment.get("classification")
             in {"TRANSFER_WITH_TRADEOFFS", "INDEPENDENT_FALSIFIER"},
             "insufficient_assessment",
+        ),
+        (assessment.get("recommended_level") in {"L3", "L4"}, "insufficient_level"),
+        (assessment.get("requires_reassessment", False) is not True, "reassessment_required"),
+        (
+            not isinstance(assessment.get("reassessment_of_event_id"), str),
+            "reassessment_resolution_not_fresh_evidence",
         ),
     )
     for passed, reason in checks:
