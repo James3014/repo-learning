@@ -157,7 +157,7 @@ def test_legacy_event_flag_cannot_self_authorize_fading(tmp_path):
         delay_hours=0,
         legacy_fade_flag=True,
     )
-    assert not derive_fading_decision(legacy).eligible
+    assert not derive_fading_decision(legacy, previous_observed_at="2026-09-17T00:00:00Z").eligible
     backend.append_learning_event("james", legacy)
     state = backend.refresh_projection("james")
     concept = state["concepts"]["single owner"]
@@ -184,7 +184,10 @@ def test_transfer_label_without_l3_or_l4_cannot_authorize_fading():
         delay_hours=24,
     )
     weak["assessment"]["recommended_level"] = "L2"
-    decision = derive_fading_decision(weak)
+    decision = derive_fading_decision(
+        weak,
+        previous_observed_at="2026-09-17T00:00:00Z",
+    )
     assert not decision.eligible
     assert decision.reason == "insufficient_level"
 
@@ -196,7 +199,13 @@ def test_reassessment_or_ai_only_event_cannot_authorize_fading():
         delay_hours=24,
     )
     reassessment["assessment"]["requires_reassessment"] = True
-    assert derive_fading_decision(reassessment).reason == "reassessment_required"
+    assert (
+        derive_fading_decision(
+            reassessment,
+            previous_observed_at="2026-09-17T00:00:00Z",
+        ).reason
+        == "reassessment_required"
+    )
 
     resolver = event(
         "ev-resolver",
@@ -205,7 +214,10 @@ def test_reassessment_or_ai_only_event_cannot_authorize_fading():
     )
     resolver["assessment"]["reassessment_of_event_id"] = "ev-conflict"
     assert (
-        derive_fading_decision(resolver).reason
+        derive_fading_decision(
+            resolver,
+            previous_observed_at="2026-09-17T00:00:00Z",
+        ).reason
         == "reassessment_resolution_not_fresh_evidence"
     )
 
@@ -215,7 +227,13 @@ def test_reassessment_or_ai_only_event_cannot_authorize_fading():
         delay_hours=24,
     )
     ai_only["attempt"]["ai_explanation_only"] = True
-    assert derive_fading_decision(ai_only).reason == "ai_explanation_only"
+    assert (
+        derive_fading_decision(
+            ai_only,
+            previous_observed_at="2026-09-17T00:00:00Z",
+        ).reason
+        == "ai_explanation_only"
+    )
 
 
 def test_independent_llm_evaluator_must_differ_from_generator():
@@ -234,10 +252,25 @@ def test_delayed_independent_transfer_derives_temporary_fading(tmp_path):
         independence=AttemptIndependence.INDEPENDENT.value,
         delay_hours=24,
     )
-    decision = derive_fading_decision(independent)
+    decision = derive_fading_decision(
+        independent,
+        previous_observed_at="2026-09-17T00:00:00Z",
+    )
     assert decision.eligible
     assert decision.basis_event_id == "ev-independent"
     assert decision.valid_until == "2026-10-18T00:00:00Z"
+    backend.append_learning_event(
+        "james",
+        event(
+            "ev-prior",
+            observed_at="2026-09-17T00:00:00Z",
+            independence=AttemptIndependence.GUIDED.value,
+            delay_hours=0,
+            cue_level="LIGHT",
+            transfer_distance="SAME_STRUCTURE",
+            classification="EXPLAINED_WITH_EVIDENCE",
+        ),
+    )
     backend.append_learning_event("james", independent)
     state = backend.refresh_projection("james")
     concept = state["concepts"]["single owner"]
@@ -246,8 +279,101 @@ def test_delayed_independent_transfer_derives_temporary_fading(tmp_path):
     assert concept["fading_valid_until"] == "2026-10-18T00:00:00Z"
 
 
+def test_reported_delay_cannot_fake_same_session_fading(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event(
+        "james",
+        event(
+            "ev-prior",
+            observed_at="2026-09-18T00:00:00Z",
+            independence=AttemptIndependence.GUIDED.value,
+            cue_level="LIGHT",
+            transfer_distance="SAME_STRUCTURE",
+            classification="EXPLAINED_WITH_EVIDENCE",
+        ),
+    )
+    fake_delay = event(
+        "ev-fake-delay",
+        observed_at="2026-09-18T01:00:00Z",
+        independence=AttemptIndependence.INDEPENDENT.value,
+        delay_hours=999,
+    )
+    backend.append_learning_event("james", fake_delay)
+    state = backend.refresh_projection("james")
+    assert state["concepts"]["single owner"]["fading_valid_until"] is None
+
+
+def test_reassessment_resolution_revokes_existing_fading(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event(
+        "james",
+        event(
+            "ev-prior",
+            observed_at="2026-09-16T00:00:00Z",
+            independence=AttemptIndependence.GUIDED.value,
+            cue_level="LIGHT",
+            transfer_distance="SAME_STRUCTURE",
+            classification="EXPLAINED_WITH_EVIDENCE",
+        ),
+    )
+    backend.append_learning_event(
+        "james",
+        event(
+            "ev-independent",
+            observed_at="2026-09-18T00:00:00Z",
+            independence=AttemptIndependence.INDEPENDENT.value,
+            delay_hours=48,
+        ),
+    )
+    faded = backend.refresh_projection("james")
+    assert faded["concepts"]["single owner"]["fading_valid_until"] is not None
+
+    conflict = event(
+        "ev-conflict",
+        observed_at="2026-09-19T00:00:00Z",
+        independence=AttemptIndependence.GUIDED.value,
+        cue_level="HEAVY",
+        transfer_distance="SAME_STRUCTURE",
+        classification="USER_ATTEMPT",
+    )
+    conflict["assessment"]["recommended_level"] = "L2"
+    backend.append_learning_event("james", conflict)
+
+    resolution = event(
+        "ev-resolution",
+        observed_at="2026-09-20T00:00:00Z",
+        independence=AttemptIndependence.GUIDED.value,
+        cue_level="HEAVY",
+        transfer_distance="SAME_STRUCTURE",
+        classification="REASSESSMENT_REQUIRED",
+    )
+    resolution["assessment"]["recommended_level"] = "L2"
+    recovered = backend.resolve_reassessment(
+        "james",
+        conflict_event_id="ev-conflict",
+        resolution_event=resolution,
+    )
+    concept = recovered["concepts"]["single owner"]
+    assert concept["level"] == "L2"
+    assert concept["silent_cue_fading_eligible"] is False
+    assert concept["fading_valid_until"] is None
+    assert concept["fading_basis_event_id"] is None
+
+
 def test_fading_expiry_reopens_natural_revalidation(tmp_path):
     backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event(
+        "james",
+        event(
+            "ev-prior",
+            observed_at="2026-09-16T00:00:00Z",
+            independence=AttemptIndependence.GUIDED.value,
+            delay_hours=0,
+            cue_level="LIGHT",
+            transfer_distance="SAME_STRUCTURE",
+            classification="EXPLAINED_WITH_EVIDENCE",
+        ),
+    )
     backend.append_learning_event(
         "james",
         event(
