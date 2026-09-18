@@ -13,8 +13,10 @@
     "branch_selection_valid",
     "prompt_generated",
     "answer_revealing_progress_before_prompt",
+    "response_present",
     "response_relevance",
     "engineering_blocked",
+    "interaction_defect",
     "cue_fading_suppressed"
   ],
   "properties": {
@@ -35,6 +37,7 @@
     "prompt_visible_in_final_response": {"type": ["boolean", "null"]},
     "prompt_before_decisive_evidence": {"type": ["boolean", "null"]},
     "answer_revealing_progress_before_prompt": {"type": "boolean"},
+    "response_present": {"type": "boolean"},
     "response_relevance": {
       "enum": ["PROMPT_ANSWER", "UNRELATED_ENGINEERING", "EXPLICIT_SKIP", "UNKNOWN"]
     },
