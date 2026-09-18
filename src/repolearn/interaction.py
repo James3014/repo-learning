@@ -11,7 +11,7 @@ from enum import Enum
 import re
 
 from .triggers import ActivationSource
-from .version import CONTRACT_REVISION
+from .version import CONTRACT_CONTENT_SHA256, CONTRACT_REVISION
 
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -179,7 +179,10 @@ class InteractionObservationReceipt:
     @property
     def interaction_defects(self) -> tuple[InteractionDefect, ...]:
         defects: list[InteractionDefect] = []
-        if self.contract_revision is not None and self.contract_revision != CONTRACT_REVISION:
+        if (
+            self.contract_revision != CONTRACT_REVISION
+            or self.contract_content_sha256 != CONTRACT_CONTENT_SHA256
+        ):
             defects.append(InteractionDefect.CONTRACT_ATTESTATION_DEFECT)
         if self.engineering_blocked:
             defects.append(InteractionDefect.ENGINEERING_BLOCKING_DEFECT)
@@ -208,13 +211,12 @@ class InteractionObservationReceipt:
         self,
         *,
         expected_revision: str = CONTRACT_REVISION,
-        expected_content_sha256: str | None = None,
+        expected_content_sha256: str = CONTRACT_CONTENT_SHA256,
     ) -> bool:
-        if self.contract_revision != expected_revision:
-            return False
-        if expected_content_sha256 is not None:
-            return self.contract_content_sha256 == expected_content_sha256
-        return self.contract_content_sha256 is not None
+        return bool(
+            self.contract_revision == expected_revision
+            and self.contract_content_sha256 == expected_content_sha256
+        )
 
     def qualifies_for_independent_g5_evidence(
         self,
