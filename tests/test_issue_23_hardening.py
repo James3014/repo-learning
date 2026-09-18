@@ -119,8 +119,9 @@ def test_trace_hash_binds_exact_visible_interaction_without_persisting_text():
     assert len(first) == 64
     assert first != second
     payload = receipt(trace_sha256=first).to_dict()
-    assert "problem" not in json.dumps(payload)
-    assert "answer" not in json.dumps(payload)
+    serialized = json.dumps(payload)
+    assert "TOP-SECRET-USER-TEXT" not in serialized
+    assert "TOP-SECRET-FINAL-TEXT" not in serialized
 
 
 def test_self_reported_receipt_cannot_be_independent_g5_evidence():
@@ -174,6 +175,56 @@ def test_guided_same_session_success_cannot_suppress(tmp_path):
     backend.append_learning_event("james", guided)
     state = backend.refresh_projection("james")
     assert state["concepts"]["single owner"]["fading_valid_until"] is None
+
+
+def test_transfer_label_without_l3_or_l4_cannot_authorize_fading():
+    weak = event(
+        "ev-weak",
+        independence=AttemptIndependence.INDEPENDENT.value,
+        delay_hours=24,
+    )
+    weak["assessment"]["recommended_level"] = "L2"
+    decision = derive_fading_decision(weak)
+    assert not decision.eligible
+    assert decision.reason == "insufficient_level"
+
+
+def test_reassessment_or_ai_only_event_cannot_authorize_fading():
+    reassessment = event(
+        "ev-reassessment",
+        independence=AttemptIndependence.INDEPENDENT.value,
+        delay_hours=24,
+    )
+    reassessment["assessment"]["requires_reassessment"] = True
+    assert derive_fading_decision(reassessment).reason == "reassessment_required"
+
+    resolver = event(
+        "ev-resolver",
+        independence=AttemptIndependence.INDEPENDENT.value,
+        delay_hours=24,
+    )
+    resolver["assessment"]["reassessment_of_event_id"] = "ev-conflict"
+    assert (
+        derive_fading_decision(resolver).reason
+        == "reassessment_resolution_not_fresh_evidence"
+    )
+
+    ai_only = event(
+        "ev-ai-only",
+        independence=AttemptIndependence.INDEPENDENT.value,
+        delay_hours=24,
+    )
+    ai_only["attempt"]["ai_explanation_only"] = True
+    assert derive_fading_decision(ai_only).reason == "ai_explanation_only"
+
+
+def test_independent_llm_evaluator_must_differ_from_generator():
+    with pytest.raises(ValueError, match="must differ"):
+        receipt(
+            evaluation_source=EvaluationSource.INDEPENDENT_LLM,
+            generator_id="model-a",
+            evaluator_id="model-a",
+        )
 
 
 def test_delayed_independent_transfer_derives_temporary_fading(tmp_path):
