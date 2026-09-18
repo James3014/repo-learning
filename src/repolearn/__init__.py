@@ -55,7 +55,7 @@ from .triggers import (
     TriggerResult,
     select_learning_opportunity,
 )
-from .version import CONTRACT_CONTROL_FILES, CONTRACT_REVISION
+from .version import CONTRACT_CONTENT_SHA256, CONTRACT_CONTROL_FILES, CONTRACT_REVISION
 
 __all__ = [
     "ActivationSource",
@@ -63,6 +63,7 @@ __all__ = [
     "AssessmentResult",
     "AttemptIndependence",
     "BackendConflictError",
+    "CONTRACT_CONTENT_SHA256",
     "CONTRACT_CONTROL_FILES",
     "CONTRACT_REVISION",
     "ClientLearningDecision",
