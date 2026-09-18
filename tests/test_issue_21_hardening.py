@@ -274,6 +274,10 @@ def test_local_projection_carries_concept_cue_fading_state(tmp_path):
     backend = LocalFileBackend(tmp_path)
     backend.append_learning_event(
         "james",
+        learning_event("ev-0", "L2", "2026-09-17T00:00:00Z", silent=False),
+    )
+    backend.append_learning_event(
+        "james",
         learning_event("ev-1", "L3", "2026-09-18T00:00:00Z", silent=True),
     )
     state = backend.refresh_projection("james")
