@@ -81,6 +81,7 @@ contract_revision
 contract_content_sha256
 trace_sha256
 evaluation_source
+generator_id
 evaluator_id
 activation_source
 trigger_selected
@@ -109,7 +110,7 @@ cue_level
 transfer_distance
 ```
 
-Repository/revision provenance may be carried separately by the host when privacy policy permits. The generic interaction receipt intentionally stores no transcript/source text, but it does bind evaluation to a SHA-256 of the exact user-visible trace and records the loaded RepoLearn contract fingerprint plus evaluator provenance.
+Repository/revision provenance may be carried separately by the host when privacy policy permits. The generic interaction receipt intentionally stores no transcript/source text, but it does bind evaluation to a SHA-256 of the exact user-visible trace and records the loaded RepoLearn contract fingerprint plus evaluator provenance. An `INDEPENDENT_LLM` observation must name both the response generator and evaluator, and they must differ.
 
 Do not include source excerpts, secrets, transcripts, private repository material, or full mastery history in public receipts.
 
