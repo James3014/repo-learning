@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://repolearn.dev/schemas/interaction-observation.v1.json",
+  "title": "repolearn.interaction_observation.v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "task_id",
+    "activation_source",
+    "trigger_selected",
+    "spontaneous_judgment_present",
+    "branch_selection_valid",
+    "prompt_generated",
+    "answer_revealing_progress_before_prompt",
+    "response_relevance",
+    "engineering_blocked",
+    "cue_fading_suppressed"
+  ],
+  "properties": {
+    "schema": {"const": "repolearn.interaction_observation.v1"},
+    "task_id": {"type": "string", "minLength": 1},
+    "activation_source": {
+      "enum": ["repository_pointer", "explicit_invocation", "auto_discovery"]
+    },
+    "trigger_selected": {"type": "boolean"},
+    "selected_branch": {
+      "enum": ["JUDGMENT_PROMPT", "SPONTANEOUS_JUDGMENT_CAPTURE", null]
+    },
+    "spontaneous_judgment_present": {"type": "boolean"},
+    "branch_selection_valid": {"type": "boolean"},
+    "prompt_generated": {"type": "boolean"},
+    "prompt_answerable_without_repo_vocabulary": {"type": ["boolean", "null"]},
+    "terminology_clarification_required": {"type": ["boolean", "null"]},
+    "prompt_visible_in_final_response": {"type": ["boolean", "null"]},
+    "prompt_before_decisive_evidence": {"type": ["boolean", "null"]},
+    "answer_revealing_progress_before_prompt": {"type": "boolean"},
+    "response_relevance": {
+      "enum": ["PROMPT_ANSWER", "UNRELATED_ENGINEERING", "EXPLICIT_SKIP", "UNKNOWN"]
+    },
+    "engineering_blocked": {"type": "boolean"},
+    "interaction_defect": {
+      "enum": [
+        "NONE",
+        "GUIDED_BRANCH_SELECTION_DEFECT",
+        "PROMPT_COMPREHENSION_DEFECT",
+        "PROMPT_VISIBILITY_DEFECT",
+        "PRE_EVIDENCE_ORDERING_DEFECT",
+        "RESPONSE_RELEVANCE_DEFECT",
+        "ENGINEERING_BLOCKING_DEFECT"
+      ]
+    },
+    "cue_fading_suppressed": {"type": "boolean"},
+    "cue_level": {"enum": ["NONE", "LIGHT", "HEAVY", null]},
+    "transfer_distance": {
+      "enum": ["SAME_STRUCTURE", "NEAR_TRANSFER", "FAR_TRANSFER", null]
+    }
+  }
+}
