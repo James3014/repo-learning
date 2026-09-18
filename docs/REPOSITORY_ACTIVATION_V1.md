@@ -67,6 +67,7 @@ Keep these claims separate:
 repository_enrolled
 != repository_instruction_loaded
 != canonical_capability_loaded
+!= loaded_contract_attested
 != learning_state_loaded
 != trigger_selected
 != visible_learning_interaction
@@ -76,6 +77,11 @@ repository_enrolled
 For dogfood/rollout diagnostics, prefer a bounded receipt. The executable `repolearn.interaction_observation.v1` receipt records classifications and booleans rather than prompt/transcript text, including:
 
 ```text
+contract_revision
+contract_content_sha256
+trace_sha256
+evaluation_source
+evaluator_id
 activation_source
 trigger_selected
 selected_branch
@@ -91,12 +97,19 @@ response_present
 response_relevance
 engineering_blocked
 interaction_defect
+interaction_defects
+natural_task
+added_turns
+added_time_ms_estimate
+added_context_tokens_estimate
+user_language
+language_alignment_valid
 cue_fading_suppressed
 cue_level
 transfer_distance
 ```
 
-Repository/revision provenance may be carried separately by the host when privacy policy permits; it is intentionally not required inside the generic interaction receipt.
+Repository/revision provenance may be carried separately by the host when privacy policy permits. The generic interaction receipt intentionally stores no transcript/source text, but it does bind evaluation to a SHA-256 of the exact user-visible trace and records the loaded RepoLearn contract fingerprint plus evaluator provenance.
 
 Do not include source excerpts, secrets, transcripts, private repository material, or full mastery history in public receipts.
 
@@ -104,4 +117,4 @@ Do not include source excerpts, secrets, transcripts, private repository materia
 
 A repository can claim **deterministic RepoLearn activation** only when its activation pointer is present and the tested host/client is proven to load that instruction surface.
 
-Skill installation or automatic Skill discovery alone cannot support that claim.
+Skill installation or automatic Skill discovery alone cannot support that claim. A G5 interaction-quality claim also requires loaded-contract attestation; self-reported semantic labels alone may diagnose behavior but are not independent evaluation evidence.
