@@ -17,46 +17,206 @@
     "response_relevance",
     "engineering_blocked",
     "interaction_defect",
-    "cue_fading_suppressed"
+    "interaction_defects",
+    "cue_fading_suppressed",
+    "contract_revision",
+    "contract_content_sha256",
+    "trace_sha256",
+    "evaluation_source",
+    "natural_task",
+    "added_turns"
   ],
   "properties": {
-    "schema": {"const": "repolearn.interaction_observation.v1"},
-    "task_id": {"type": "string", "minLength": 1},
+    "schema": {
+      "const": "repolearn.interaction_observation.v1"
+    },
+    "task_id": {
+      "type": "string",
+      "minLength": 1
+    },
     "activation_source": {
-      "enum": ["repository_pointer", "explicit_invocation", "auto_discovery"]
+      "enum": [
+        "repository_pointer",
+        "explicit_invocation",
+        "auto_discovery"
+      ]
     },
-    "trigger_selected": {"type": "boolean"},
+    "trigger_selected": {
+      "type": "boolean"
+    },
     "selected_branch": {
-      "enum": ["JUDGMENT_PROMPT", "SPONTANEOUS_JUDGMENT_CAPTURE", null]
+      "enum": [
+        "JUDGMENT_PROMPT",
+        "SPONTANEOUS_JUDGMENT_CAPTURE",
+        null
+      ]
     },
-    "spontaneous_judgment_present": {"type": "boolean"},
-    "branch_selection_valid": {"type": "boolean"},
-    "prompt_generated": {"type": "boolean"},
-    "prompt_answerable_without_repo_vocabulary": {"type": ["boolean", "null"]},
-    "terminology_clarification_required": {"type": ["boolean", "null"]},
-    "prompt_visible_in_final_response": {"type": ["boolean", "null"]},
-    "prompt_before_decisive_evidence": {"type": ["boolean", "null"]},
-    "answer_revealing_progress_before_prompt": {"type": "boolean"},
-    "response_present": {"type": "boolean"},
+    "spontaneous_judgment_present": {
+      "type": "boolean"
+    },
+    "branch_selection_valid": {
+      "type": "boolean"
+    },
+    "prompt_generated": {
+      "type": "boolean"
+    },
+    "prompt_answerable_without_repo_vocabulary": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "terminology_clarification_required": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "prompt_visible_in_final_response": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "prompt_before_decisive_evidence": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "answer_revealing_progress_before_prompt": {
+      "type": "boolean"
+    },
+    "response_present": {
+      "type": "boolean"
+    },
     "response_relevance": {
-      "enum": ["PROMPT_ANSWER", "UNRELATED_ENGINEERING", "EXPLICIT_SKIP", "UNKNOWN"]
+      "enum": [
+        "PROMPT_ANSWER",
+        "UNRELATED_ENGINEERING",
+        "EXPLICIT_SKIP",
+        "UNKNOWN"
+      ]
     },
-    "engineering_blocked": {"type": "boolean"},
+    "engineering_blocked": {
+      "type": "boolean"
+    },
     "interaction_defect": {
       "enum": [
         "NONE",
+        "CONTRACT_ATTESTATION_DEFECT",
         "GUIDED_BRANCH_SELECTION_DEFECT",
         "PROMPT_COMPREHENSION_DEFECT",
         "PROMPT_VISIBILITY_DEFECT",
         "PRE_EVIDENCE_ORDERING_DEFECT",
+        "LANGUAGE_ALIGNMENT_DEFECT",
         "RESPONSE_RELEVANCE_DEFECT",
         "ENGINEERING_BLOCKING_DEFECT"
       ]
     },
-    "cue_fading_suppressed": {"type": "boolean"},
-    "cue_level": {"enum": ["NONE", "LIGHT", "HEAVY", null]},
+    "interaction_defects": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "CONTRACT_ATTESTATION_DEFECT",
+          "GUIDED_BRANCH_SELECTION_DEFECT",
+          "PROMPT_COMPREHENSION_DEFECT",
+          "PROMPT_VISIBILITY_DEFECT",
+          "PRE_EVIDENCE_ORDERING_DEFECT",
+          "LANGUAGE_ALIGNMENT_DEFECT",
+          "RESPONSE_RELEVANCE_DEFECT",
+          "ENGINEERING_BLOCKING_DEFECT"
+        ]
+      }
+    },
+    "cue_fading_suppressed": {
+      "type": "boolean"
+    },
+    "cue_level": {
+      "enum": [
+        "NONE",
+        "LIGHT",
+        "HEAVY",
+        null
+      ]
+    },
     "transfer_distance": {
-      "enum": ["SAME_STRUCTURE", "NEAR_TRANSFER", "FAR_TRANSFER", null]
+      "enum": [
+        "SAME_STRUCTURE",
+        "NEAR_TRANSFER",
+        "FAR_TRANSFER",
+        null
+      ]
+    },
+    "contract_revision": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "contract_content_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "trace_sha256": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "evaluation_source": {
+      "enum": [
+        "SELF_REPORTED",
+        "DETERMINISTIC",
+        "INDEPENDENT_LLM",
+        "HUMAN"
+      ]
+    },
+    "evaluator_id": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 120
+    },
+    "natural_task": {
+      "type": "boolean"
+    },
+    "added_turns": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "added_time_ms_estimate": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "added_context_tokens_estimate": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "user_language": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "maxLength": 32
+    },
+    "language_alignment_valid": {
+      "type": [
+        "boolean",
+        "null"
+      ]
     }
   }
 }
