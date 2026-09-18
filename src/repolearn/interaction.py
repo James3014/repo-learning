@@ -125,11 +125,14 @@ class InteractionObservationReceipt:
             raise ValueError("task_id must be non-empty")
         if not self.trigger_selected and self.selected_branch is not None:
             raise ValueError("no-trigger receipt cannot select a guided branch")
-        if (
-            self.selected_branch is GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
-            and not self.spontaneous_judgment_present
-        ):
-            object.__setattr__(self, "branch_selection_valid", False)
+        if self.trigger_selected and self.selected_branch is not None:
+            expected_branch = (
+                GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
+                if self.spontaneous_judgment_present
+                else GuidedBranch.JUDGMENT_PROMPT
+            )
+            if self.selected_branch is not expected_branch:
+                object.__setattr__(self, "branch_selection_valid", False)
 
     @property
     def interaction_defect(self) -> InteractionDefect:
