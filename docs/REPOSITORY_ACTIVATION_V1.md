@@ -73,20 +73,30 @@ repository_enrolled
 != learning_event_persisted
 ```
 
-For dogfood/rollout diagnostics, prefer a bounded receipt with fields such as:
+For dogfood/rollout diagnostics, prefer a bounded receipt. The executable `repolearn.interaction_observation.v1` receipt records classifications and booleans rather than prompt/transcript text, including:
 
 ```text
-repository
-revision
-repository_instruction_loaded = true|false
-activation_source = repository_pointer|explicit_invocation|auto_discovery|none
-canonical_capability_loaded = true|false
-mode
-state_loaded = true|false
-trigger = none|one
-interaction = asked|skip|none
-engineering_blocked = false
+activation_source
+trigger_selected
+selected_branch
+spontaneous_judgment_present
+branch_selection_valid
+prompt_generated
+prompt_answerable_without_repo_vocabulary
+terminology_clarification_required
+prompt_visible_in_final_response
+prompt_before_decisive_evidence
+answer_revealing_progress_before_prompt
+response_present
+response_relevance
+engineering_blocked
+interaction_defect
+cue_fading_suppressed
+cue_level
+transfer_distance
 ```
+
+Repository/revision provenance may be carried separately by the host when privacy policy permits; it is intentionally not required inside the generic interaction receipt.
 
 Do not include source excerpts, secrets, transcripts, private repository material, or full mastery history in public receipts.
 
