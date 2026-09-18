@@ -161,12 +161,11 @@ class InteractionObservationReceipt:
         if self.evaluation_source is not EvaluationSource.SELF_REPORTED:
             if not self.evaluator_id or not self.evaluator_id.strip():
                 raise ValueError("independent/deterministic evaluation requires evaluator_id")
-        if (
-            self.evaluation_source is EvaluationSource.INDEPENDENT_LLM
-            and self.generator_id is not None
-            and self.evaluator_id == self.generator_id
-        ):
-            raise ValueError("independent LLM evaluator must differ from generator_id")
+        if self.evaluation_source is EvaluationSource.INDEPENDENT_LLM:
+            if not self.generator_id or not self.generator_id.strip():
+                raise ValueError("independent LLM evaluation requires generator_id")
+            if self.evaluator_id == self.generator_id:
+                raise ValueError("independent LLM evaluator must differ from generator_id")
         if self.trigger_selected and self.selected_branch is not None:
             expected_branch = (
                 GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
@@ -232,8 +231,10 @@ class InteractionObservationReceipt:
             and self.evaluator_id
             and (
                 self.evaluation_source is not EvaluationSource.INDEPENDENT_LLM
-                or self.generator_id is None
-                or self.evaluator_id != self.generator_id
+                or (
+                    bool(self.generator_id)
+                    and self.evaluator_id != self.generator_id
+                )
             )
         )
 
