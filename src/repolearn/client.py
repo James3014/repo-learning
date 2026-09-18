@@ -7,9 +7,11 @@ classification. It never takes engineering control.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Any, Iterable, Mapping
 
+from .cue_policy import fading_is_current
 from .interaction import (
     GuidedBranch,
     ResponseRelevance,
@@ -97,7 +99,11 @@ def classify_learning_response(
     )
 
 
-def _silently_faded_concepts(state: Mapping[str, Any] | None) -> tuple[str, ...]:
+def _silently_faded_concepts(
+    state: Mapping[str, Any] | None,
+    *,
+    now: datetime | None = None,
+) -> tuple[str, ...]:
     if not isinstance(state, Mapping):
         return ()
     concepts = state.get("concepts")
@@ -107,7 +113,7 @@ def _silently_faded_concepts(state: Mapping[str, Any] | None) -> tuple[str, ...]
     for concept, value in concepts.items():
         if not isinstance(concept, str) or not isinstance(value, Mapping):
             continue
-        if value.get("silent_cue_fading_eligible") is True:
+        if fading_is_current(value, now=now):
             faded.append(concept)
     return tuple(faded)
 
@@ -120,6 +126,7 @@ def prepare_learning_decision(
     mode: InteractionMode,
     candidate_concepts: Iterable[str],
     judgment_signal: UserJudgmentSignal | None = None,
+    now: datetime | None = None,
 ) -> ClientLearningDecision:
     """Load bounded state and choose a non-blocking learning interaction.
 
@@ -144,7 +151,7 @@ def prepare_learning_decision(
             context=context,
             mode=mode,
             candidate_concepts=candidate_concepts,
-            silently_faded_concepts=_silently_faded_concepts(state),
+            silently_faded_concepts=_silently_faded_concepts(state, now=now),
         )
 
     visible_learning_allowed = (
