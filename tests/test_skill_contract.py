@@ -141,3 +141,31 @@ def test_missing_state_is_unassessed_not_mastery_or_backend_failure():
     assert "A missing profile/state from an otherwise available backend is `UNASSESSED`." in STATE
     assert "does not by itself suppress an otherwise qualifying guided interaction" in STATE
     assert "Do not claim silent cue-fading suppression from chat memory alone" in POLICY
+
+
+def test_scaffold_depth_tracks_exact_concept_evidence_not_jargon_fluency():
+    assert "Choose the minimum scaffold from the bounded evidence for the exact concept" in SKILL
+    assert "For `UNASSESSED`, `L0`, or `L1`, default to neutral background plus explicit alternatives" in SKILL
+    assert "not from a broad domain level, presumed engineering background, or terminology fluency" in POLICY
+    assert "For `UNASSESSED`, `L0`, or `L1`, default to neutral background plus explicit alternatives" in POLICY
+    assert "For `L2` or stronger concept evidence, progressively fade background/options" in POLICY
+
+
+def test_judgment_prompt_requires_background_sufficiency_for_non_specialist():
+    assert "background-sufficiency check" in SKILL
+    assert "without prior knowledge of unexplained engineering jargon" in SKILL
+    assert "what changes between them, and the consequence or trade-off being judged" in SKILL
+    assert "background-sufficiency check" in POLICY
+    assert "a user without prior knowledge of unexplained engineering jargon" in POLICY
+    assert "understand the consequence/trade-off they are being asked to judge" in POLICY
+
+
+def test_scaffold_background_must_not_leak_the_answer():
+    assert "Neutral background MUST NOT reveal the recommended answer or decisive evidence" in SKILL
+    assert "must not reveal the recommendation, preferred option, or decisive evidence" in POLICY
+
+
+def test_terminology_clarification_from_under_scaffolded_prompt_is_non_assessable():
+    assert "unstated engineering background" in POLICY
+    assert "terminology-clarification request that exposes insufficient background is non-assessable user evidence" in POLICY
+    assert "repair the scaffold and do not lower mastery" in POLICY
