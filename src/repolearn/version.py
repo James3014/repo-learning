@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-CONTRACT_REVISION = "g5-scaffold-calibration-v2"
-CONTRACT_CONTENT_SHA256 = "382061285e8068bee11aa1ce6ae00c9c0c9b14c8cc5cc4fcb19c525931e8a340"
+CONTRACT_REVISION = "g5-learning-control-loop-v3"
+CONTRACT_CONTENT_SHA256 = "8fa154f05bb33c70a12581968c9f30bc83f4bf60df5faad7ff0c2ce52a9855ac"
 CONTRACT_CONTROL_FILES = (
     "SKILL.md",
     "agents/openai.yaml",
