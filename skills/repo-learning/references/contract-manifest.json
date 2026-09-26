@@ -1,6 +1,6 @@
 {
   "contract_revision": "g5-learning-control-loop-v3",
-  "content_sha256": "8fa154f05bb33c70a12581968c9f30bc83f4bf60df5faad7ff0c2ce52a9855ac",
+  "content_sha256": "8fa154f05bb3a5a1652d8a0b8388e718ce685257a2da26e2121c2ce52a9855ac",
   "fingerprint_scope": [
     "SKILL.md",
     "agents/openai.yaml",
