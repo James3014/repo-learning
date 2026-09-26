@@ -3,6 +3,7 @@ from pathlib import Path
 SKILL = Path("skills/repo-learning/SKILL.md").read_text()
 POLICY = Path("skills/repo-learning/references/policy.md").read_text()
 STATE = Path("skills/repo-learning/references/state-contract.md").read_text()
+ACTIVATION = Path("docs/REPOSITORY_ACTIVATION_V1.md").read_text()
 
 
 def test_repository_pointer_is_primary_activation_for_enrolled_repo():
@@ -201,3 +202,11 @@ def test_loaded_contract_drift_fails_open_without_current_contract_claims():
     assert "compare them with the actually loaded Skill manifest" in POLICY
     assert "A mismatch is deployment drift, not a learner failure" in POLICY
     assert "Keep these states separate: canonical source current, package current, install roots current, loaded Skill current" in POLICY
+
+
+def test_repository_activation_pointer_can_pin_expected_contract_identity():
+    assert "expected canonical contract identity" in ACTIVATION
+    assert "contract_revision" in ACTIVATION
+    assert "content_sha256" in ACTIVATION
+    assert "If they differ, classify deployment drift" in ACTIVATION
+    assert "continue normal engineering" in ACTIVATION
