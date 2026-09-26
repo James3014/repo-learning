@@ -69,6 +69,34 @@ The repository also contains bounded preparation work for later gates without cl
 
 Actual G6 rollout remains blocked on G5 closure; actual G7 cutover, G8 Friend Alpha and G9 effectiveness claims each require their later evidence/authority gates.
 
+## Learning control loop and Skill deployment
+
+RepoLearn keeps the learning loop separate from engineering authority:
+
+```text
+real work -> opportunity -> bounded concept state -> scaffold
+          -> response opportunity -> evidence -> later transfer -> learning state
+```
+
+A prompt is assessable only when the learner has a real chance to answer before
+the recommendation or decisive evidence is revealed. If the engineering task
+must reveal or act on the answer immediately, RepoLearn uses `EXPOSURE_ONLY`
+and continues engineering without pretending that a mastery test occurred.
+
+Source, package, install, loaded runtime and interaction evidence are separate
+claims. For filesystem-based Agent Skill roots, synchronize the canonical Skill
+deterministically instead of hand-copying:
+
+```bash
+python scripts/install_skill.py --root ~/.agents/skills --check
+python scripts/install_skill.py --root ~/.agents/skills
+```
+
+Repeat `--root` for each supported filesystem skill root. `--check` reports
+drift without mutation. A synchronized install still does not prove which copy a
+fresh host session actually loaded; loaded-contract identity must be attested
+separately.
+
 ## Development
 
 Requires Python 3.11+.
