@@ -20,6 +20,7 @@ _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 class GuidedBranch(str, Enum):
     JUDGMENT_PROMPT = "JUDGMENT_PROMPT"
     SPONTANEOUS_JUDGMENT_CAPTURE = "SPONTANEOUS_JUDGMENT_CAPTURE"
+    EXPOSURE_ONLY = "EXPOSURE_ONLY"
 
 
 @dataclass(frozen=True)
@@ -44,11 +45,17 @@ class UserJudgmentSignal:
         return self.explicit_position or self.explicit_prediction or self.explicit_risk_judgment
 
 
-def select_guided_branch(signal: UserJudgmentSignal) -> GuidedBranch:
-    """Choose the safe guided branch; ambiguity resolves to a prompt."""
+def select_guided_branch(
+    signal: UserJudgmentSignal,
+    *,
+    response_opportunity_available: bool = True,
+) -> GuidedBranch:
+    """Choose the safe guided branch without inventing an assessment opportunity."""
 
     if signal.meaningful_pre_evidence_judgment:
         return GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
+    if not response_opportunity_available:
+        return GuidedBranch.EXPOSURE_ONLY
     return GuidedBranch.JUDGMENT_PROMPT
 
 
@@ -76,6 +83,7 @@ class InteractionDefect(str, Enum):
     LANGUAGE_ALIGNMENT_DEFECT = "LANGUAGE_ALIGNMENT_DEFECT"
     RESPONSE_RELEVANCE_DEFECT = "RESPONSE_RELEVANCE_DEFECT"
     ENGINEERING_BLOCKING_DEFECT = "ENGINEERING_BLOCKING_DEFECT"
+    NO_RESPONSE_OPPORTUNITY_DEFECT = "NO_RESPONSE_OPPORTUNITY_DEFECT"
 
 
 @dataclass(frozen=True)
@@ -87,6 +95,8 @@ class PromptDeliveryObservation:
     prompt_before_decisive_evidence: bool | None
     answer_revealing_progress_before_prompt: bool = False
     language_alignment_valid: bool | None = None
+    response_opportunity_before_reveal: bool = True
+    answer_revealed_in_same_assistant_turn: bool = False
 
     @property
     def defects(self) -> tuple[InteractionDefect, ...]:
@@ -97,6 +107,11 @@ class PromptDeliveryObservation:
             defects.append(InteractionDefect.PROMPT_COMPREHENSION_DEFECT)
         if self.prompt_before_decisive_evidence is not True or self.answer_revealing_progress_before_prompt:
             defects.append(InteractionDefect.PRE_EVIDENCE_ORDERING_DEFECT)
+        if (
+            self.response_opportunity_before_reveal is not True
+            or self.answer_revealed_in_same_assistant_turn
+        ):
+            defects.append(InteractionDefect.NO_RESPONSE_OPPORTUNITY_DEFECT)
         if self.language_alignment_valid is False:
             defects.append(InteractionDefect.LANGUAGE_ALIGNMENT_DEFECT)
         return tuple(defects)
@@ -140,6 +155,8 @@ class InteractionObservationReceipt:
     added_context_tokens_estimate: int | None = None
     user_language: str | None = None
     language_alignment_valid: bool | None = None
+    response_opportunity_before_reveal: bool = True
+    answer_revealed_in_same_assistant_turn: bool = False
 
     def __post_init__(self) -> None:
         if not self.task_id.strip():
@@ -167,11 +184,12 @@ class InteractionObservationReceipt:
             if self.evaluator_id == self.generator_id:
                 raise ValueError("independent LLM evaluator must differ from generator_id")
         if self.trigger_selected and self.selected_branch is not None:
-            expected_branch = (
-                GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
-                if self.spontaneous_judgment_present
-                else GuidedBranch.JUDGMENT_PROMPT
-            )
+            if self.spontaneous_judgment_present:
+                expected_branch = GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
+            elif not self.response_opportunity_before_reveal:
+                expected_branch = GuidedBranch.EXPOSURE_ONLY
+            else:
+                expected_branch = GuidedBranch.JUDGMENT_PROMPT
             if self.selected_branch is not expected_branch:
                 object.__setattr__(self, "branch_selection_valid", False)
 
@@ -196,6 +214,8 @@ class InteractionObservationReceipt:
                 prompt_before_decisive_evidence=self.prompt_before_decisive_evidence,
                 answer_revealing_progress_before_prompt=self.answer_revealing_progress_before_prompt,
                 language_alignment_valid=self.language_alignment_valid,
+                response_opportunity_before_reveal=self.response_opportunity_before_reveal,
+                answer_revealed_in_same_assistant_turn=self.answer_revealed_in_same_assistant_turn,
             )
             defects.extend(prompt.defects)
             if self.response_present and self.response_relevance is ResponseRelevance.UNKNOWN:
@@ -205,6 +225,18 @@ class InteractionObservationReceipt:
     @property
     def interaction_defect(self) -> InteractionDefect:
         return self.interaction_defects[0] if self.interaction_defects else InteractionDefect.NONE
+
+    @property
+    def assessable_pre_evidence_prompt_response(self) -> bool:
+        """Whether a prompt response can be considered pre-evidence learning evidence."""
+
+        if self.selected_branch is not GuidedBranch.JUDGMENT_PROMPT:
+            return False
+        if not self.response_present or self.response_relevance is not ResponseRelevance.PROMPT_ANSWER:
+            return False
+        if not self.response_opportunity_before_reveal or self.answer_revealed_in_same_assistant_turn:
+            return False
+        return not self.interaction_defects
 
     def attestation_matches(
         self,
@@ -275,4 +307,7 @@ class InteractionObservationReceipt:
             "added_context_tokens_estimate": self.added_context_tokens_estimate,
             "user_language": self.user_language,
             "language_alignment_valid": self.language_alignment_valid,
+            "response_opportunity_before_reveal": self.response_opportunity_before_reveal,
+            "answer_revealed_in_same_assistant_turn": self.answer_revealed_in_same_assistant_turn,
+            "assessable_pre_evidence_prompt_response": self.assessable_pre_evidence_prompt_response,
         }

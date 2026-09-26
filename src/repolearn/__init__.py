@@ -34,6 +34,16 @@ from .cue_policy import (
     derive_fading_decision,
     fading_is_current,
 )
+from .deployment import (
+    CURRENT_CONTRACT,
+    ContractAttestation,
+    ContractIdentity,
+    DeploymentDefect,
+    DeploymentStage,
+    attest_loaded_contract,
+    inspect_skill_directory,
+    sync_skill_install,
+)
 from .host_eval import compute_skill_content_sha256, hash_user_visible_trace
 from .interaction import (
     EvaluationSource,
@@ -68,6 +78,11 @@ __all__ = [
     "CONTRACT_REVISION",
     "ClientLearningDecision",
     "CueLevel",
+    "CURRENT_CONTRACT",
+    "ContractAttestation",
+    "ContractIdentity",
+    "DeploymentDefect",
+    "DeploymentStage",
     "EvaluationSource",
     "EvidenceProvenance",
     "EvidenceTiming",
@@ -98,12 +113,15 @@ __all__ = [
     "TriggerResult",
     "UserJudgmentSignal",
     "assess_judgment",
+    "attest_loaded_contract",
     "classify_learning_response",
     "compute_skill_content_sha256",
     "derive_fading_decision",
     "fading_is_current",
     "hash_user_visible_trace",
+    "inspect_skill_directory",
     "prepare_learning_decision",
     "select_guided_branch",
     "select_learning_opportunity",
+    "sync_skill_install",
 ]

@@ -3,6 +3,7 @@ from pathlib import Path
 SKILL = Path("skills/repo-learning/SKILL.md").read_text()
 POLICY = Path("skills/repo-learning/references/policy.md").read_text()
 STATE = Path("skills/repo-learning/references/state-contract.md").read_text()
+ACTIVATION = Path("docs/REPOSITORY_ACTIVATION_V1.md").read_text()
 
 
 def test_repository_pointer_is_primary_activation_for_enrolled_repo():
@@ -34,9 +35,10 @@ def test_explicit_activation_hard_suppressors_are_bounded():
 
 
 def test_selected_guided_opportunity_chooses_exactly_one_learning_branch():
-    assert "`LEARNING_OPPORTUNITY`: choose exactly one of the following two branches" in SKILL
+    assert "`LEARNING_OPPORTUNITY`: choose exactly one of the following three branches" in SKILL
     assert "`JUDGMENT_PROMPT`" in SKILL
     assert "`SPONTANEOUS_JUDGMENT_CAPTURE`" in SKILL
+    assert "`EXPOSURE_ONLY`" in SKILL
     assert "choose exactly one interaction branch" in POLICY
 
 
@@ -169,3 +171,42 @@ def test_terminology_clarification_from_under_scaffolded_prompt_is_non_assessabl
     assert "unstated engineering background" in POLICY
     assert "terminology-clarification request that exposes insufficient background is non-assessable user evidence" in POLICY
     assert "repair the scaffold and do not lower mastery" in POLICY
+
+
+def test_assessable_prompt_requires_real_response_opportunity():
+    assert "requires a real user response opportunity" in SKILL
+    assert "Do not ask the question and then answer it in the same assistant turn" in SKILL
+    assert "Use this branch only when the current response can end with the judgment still unresolved" in SKILL
+    assert "response-opportunity check" in POLICY
+    assert "must not also reveal the recommendation, selected option, implementation direction, or decisive evidence" in POLICY
+
+
+def test_no_response_opportunity_uses_explicit_exposure_only_branch():
+    assert "`EXPOSURE_ONLY`: use when there is a real architecture learning opportunity but no genuine pre-evidence response opportunity" in SKILL
+    assert "Do not emit a fake judgment prompt" in SKILL
+    assert "`EXPOSURE_ONLY`: use when the architecture point is valuable but the current task gives no real pre-evidence response opportunity" in POLICY
+    assert "Do not ask a decorative question" in POLICY
+
+
+def test_same_turn_answer_reveal_is_not_mastery_evidence():
+    assert "no-response-opportunity defect" in SKILL
+    assert "it cannot yield assessable pre-evidence mastery" in SKILL
+    assert "If the assistant asks the question and then reveals the answer in that same turn" in POLICY
+    assert "cannot be promoted to pre-evidence mastery evidence" in POLICY
+
+
+def test_loaded_contract_drift_fails_open_without_current_contract_claims():
+    assert "Compare the actually loaded `contract_revision` plus `content_sha256`" in SKILL
+    assert "A mismatch is deployment drift" in SKILL
+    assert "do not claim `LOADED_CONTRACT_VERIFIED`" in SKILL
+    assert "compare them with the actually loaded Skill manifest" in POLICY
+    assert "A mismatch is deployment drift, not a learner failure" in POLICY
+    assert "Keep these states separate: canonical source current, package current, install roots current, loaded Skill current" in POLICY
+
+
+def test_repository_activation_pointer_can_pin_expected_contract_identity():
+    assert "expected canonical contract identity" in ACTIVATION
+    assert "contract_revision" in ACTIVATION
+    assert "content_sha256" in ACTIVATION
+    assert "If they differ, classify deployment drift" in ACTIVATION
+    assert "continue normal engineering" in ACTIVATION

@@ -30,6 +30,7 @@ An enrolled target repository should expose a short pointer through its authorit
 - activation status (`ENABLED` / `DISABLED`);
 - canonical RepoLearn source (`James3014/repo-learning`);
 - canonical skill/capability name (`repo-learning`);
+- expected canonical contract identity (`contract_revision` + `content_sha256`) as a version pin, not a copied policy;
 - selected interaction mode (`observe`, `guided`, or `practice`);
 - fail-open behavior for learning unavailability;
 - an explicit statement that target-repository engineering authority is unchanged.
@@ -40,6 +41,7 @@ Example:
 RepoLearn: ENABLED
 Canonical source: James3014/repo-learning
 Capability: repo-learning
+Expected contract: g5-learning-control-loop-v3 / 8fa154f05bb3a5a1652d8a0b8388e718ce685257a2da26e2121c2ce52a9855ac
 Mode: guided
 Failure behavior: continue normal engineering if RepoLearn is unavailable
 Authority: this repository's existing engineering authority remains unchanged
@@ -53,9 +55,10 @@ When a host loads a repository instruction surface that declares RepoLearn `ENAB
 
 1. Treat the repository pointer as an explicit RepoLearn activation signal for that repository.
 2. Load/use the canonical RepoLearn capability before substantive architecture guidance when the capability is available.
-3. Apply the canonical RepoLearn Skill/policy; do not reinterpret the local pointer as a second policy source.
-4. If the capability or learning backend is unavailable, continue normal engineering and preserve the repository's existing authority and verification rules.
-5. Do not claim learning occurred unless the interaction/state evidence separately supports that claim.
+3. Compare the actually loaded Skill contract identity with the pointer's expected canonical identity. If they differ, classify deployment drift, skip assessable RepoLearn interaction, and continue normal engineering.
+4. Apply the canonical RepoLearn Skill/policy only when the loaded contract matches; do not reinterpret the local pointer as a second policy source.
+5. If the capability or learning backend is unavailable, continue normal engineering and preserve the repository's existing authority and verification rules.
+6. Do not claim learning occurred unless the interaction/state evidence separately supports that claim.
 
 A client that cannot load the repository instruction surface cannot provide deterministic repository activation through this mechanism. It may use explicit invocation or automatic discovery, but those are separate activation classes and should be reported as such.
 
