@@ -78,7 +78,7 @@ jobs:
           import re
 
           body = os.environ.get("PR_BODY", "")
-          matches = re.findall(r"<!--\\s*NEXUS_CORE_ISSUE:\\s*([1-9][0-9]*)\\s*-->", body)
+          matches = re.findall(r"<!--\s*NEXUS_CORE_ISSUE:\s*([1-9][0-9]*)\s*-->", body)
           if len(matches) != 1:
               raise SystemExit(
                   "NEXUS_CORE_ISSUE_BINDING_REQUIRED: PR body must contain exactly one "
