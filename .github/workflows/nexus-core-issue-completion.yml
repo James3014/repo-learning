@@ -85,7 +85,7 @@ jobs:
                   "'<!-- NEXUS_CORE_ISSUE: <number> -->' marker."
               )
           with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as handle:
-              handle.write(f"number={matches[0]}\\n")
+              handle.write(f"number={matches[0]}\n")
           PY
 
       - name: Set up uv
