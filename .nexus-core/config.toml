@@ -7,7 +7,7 @@ materials = []
 
 [[verifiers]]
 id = "pytest"
-command = ["python", "-m", "pytest", "-q"]
+command = ["env", "PYTHONPATH=src", "python", "-m", "pytest", "-q"]
 timeout_seconds = 1800
 logical_subject_id = "repolearn/full-tests"
 evidence_kind = "test-result"
