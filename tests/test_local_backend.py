@@ -183,3 +183,45 @@ def test_backend_rejects_symlinked_data_files(tmp_path):
         backend.read_related_history("james")
     with pytest.raises(ValueError, match="symlinks"):
         backend.append_learning_event("james", event())
+
+
+def test_latest_observation_compares_instants_not_strings(tmp_path):
+    # 12:00+08:00 is 04:00Z, which is earlier than 10:00Z. String comparison
+    # ranks "12:00+08:00" above "10:00Z" and would select the wrong latest event.
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event(
+        "james", event("ev-offset", level="L2", observed_at="2026-09-16T12:00:00+08:00")
+    )
+    backend.append_learning_event(
+        "james", event("ev-utc", level="L2", observed_at="2026-09-16T10:00:00Z")
+    )
+
+    state = backend.refresh_projection("james")
+    concept = state["concepts"]["single owner"]
+    assert concept["last_event_id"] == "ev-utc"
+    assert concept["last_observed_at"] == "2026-09-16T10:00:00Z"
+    assert state["updated_at"] == "2026-09-16T10:00:00Z"
+
+
+def test_cue_level_follows_latest_instant_across_offsets(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    late_utc = event("ev-utc", level="L2", observed_at="2026-09-16T10:00:00Z")
+    late_utc["attempt"]["cue_level"] = "NONE"
+    early_offset = event("ev-offset", level="L2", observed_at="2026-09-16T12:00:00+08:00")
+    early_offset["attempt"]["cue_level"] = "HEAVY"
+    backend.append_learning_event("james", late_utc)
+    backend.append_learning_event("james", early_offset)
+
+    state = backend.refresh_projection("james")
+    assert state["concepts"]["single owner"]["last_cue_level"] == "NONE"
+
+
+def test_naive_observed_at_is_treated_as_utc(tmp_path):
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event("ev-naive", level="L2", observed_at="2026-09-16T10:00:00"))
+    backend.append_learning_event(
+        "james", event("ev-offset", level="L2", observed_at="2026-09-16T10:30:00+00:00")
+    )
+
+    state = backend.refresh_projection("james")
+    assert state["concepts"]["single owner"]["last_event_id"] == "ev-offset"

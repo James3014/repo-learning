@@ -16,7 +16,7 @@ import re
 import tempfile
 from typing import Any
 
-from .cue_policy import derive_fading_decision
+from .cue_policy import _parse_datetime, derive_fading_decision
 from .state import StateBackend, StateUnavailableError
 
 
@@ -51,6 +51,18 @@ def _canonical_json(value: Mapping[str, Any]) -> str:
 
 def _sha256_text(text: str) -> str:
     return sha256(text.encode("utf-8")).hexdigest()
+
+
+def _is_at_or_after(candidate: object, reference: object) -> bool:
+    """Compare observed_at values as instants (offsets honoured), never as text.
+
+    Unparseable candidates never become the latest observation.
+    """
+    candidate_instant = _parse_datetime(candidate)
+    if candidate_instant is None:
+        return False
+    reference_instant = _parse_datetime(reference)
+    return reference_instant is None or candidate_instant >= reference_instant
 
 
 def _validate_profile_id(profile_id: str) -> str:
@@ -243,9 +255,7 @@ class LocalFileBackend(StateBackend):
                         )
                 else:
                     current["level"] = level
-            if isinstance(observed_at, str) and (
-                current["last_observed_at"] is None or observed_at >= current["last_observed_at"]
-            ):
+            if _is_at_or_after(observed_at, current["last_observed_at"]):
                 current["last_event_id"] = event_id
                 current["last_observed_at"] = observed_at
 
@@ -314,10 +324,7 @@ class LocalFileBackend(StateBackend):
                     conflict_has_resolution=conflict_has_resolution,
                     label=concept,
                 )
-                is_latest = (
-                    isinstance(observed_at, str)
-                    and (previous_observed is None or observed_at >= previous_observed)
-                )
+                is_latest = _is_at_or_after(observed_at, previous_observed)
                 if is_latest and isinstance(attempt, Mapping):
                     cue_level = attempt.get("cue_level")
                     if cue_level in {"NONE", "LIGHT", "HEAVY"}:
@@ -345,7 +352,11 @@ class LocalFileBackend(StateBackend):
                     current_concept["fading_valid_until"] = fading.valid_until
                     current_concept["fading_basis_event_id"] = fading.basis_event_id
 
-            if isinstance(observed_at, str) and observed_at > latest_observed:
+            observed_instant = _parse_datetime(observed_at)
+            latest_instant = _parse_datetime(latest_observed)
+            if observed_instant is not None and (
+                latest_instant is None or observed_instant > latest_instant
+            ):
                 latest_observed = observed_at
 
         ledger_text = self._event_ledger_text(events)
