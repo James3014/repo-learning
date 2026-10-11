@@ -10,6 +10,7 @@ from repolearn import (
     ActivationSource,
     AttemptIndependence,
     CONTRACT_CONTENT_SHA256,
+    CONTRACT_CONTROL_FILES,
     CONTRACT_REVISION,
     EvaluationSource,
     GuidedBranch,
@@ -105,6 +106,15 @@ def test_contract_manifest_matches_python_revision_and_skill_fingerprint():
     assert manifest["contract_revision"] == CONTRACT_REVISION
     assert manifest["content_sha256"] == CONTRACT_CONTENT_SHA256
     assert manifest["content_sha256"] == compute_skill_content_sha256(SKILL_ROOT)
+
+
+def test_contract_identity_is_consistent_across_in_repo_copies():
+    # The fingerprint input list, the manifest, and the documented expected
+    # contract in REPOSITORY_ACTIVATION_V1.md must name the same identity.
+    manifest = json.loads((SKILL_ROOT / "references" / "contract-manifest.json").read_text())
+    assert manifest["fingerprint_scope"] == list(CONTRACT_CONTROL_FILES)
+    activation = (ROOT / "docs" / "REPOSITORY_ACTIVATION_V1.md").read_text()
+    assert f"Expected contract: {CONTRACT_REVISION} / {CONTRACT_CONTENT_SHA256}" in activation
 
 
 def test_trace_hash_binds_exact_visible_interaction_without_persisting_text():
