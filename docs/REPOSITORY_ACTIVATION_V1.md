@@ -41,7 +41,7 @@ Example:
 RepoLearn: ENABLED
 Canonical source: James3014/repo-learning
 Capability: repo-learning
-Expected contract: g5-learning-control-loop-v3 / 8fa154f05bb3a5a1652d8a0b8388e718ce685257a2da26e2121c2ce52a9855ac
+Expected contract: g5-learning-control-loop-v4 / bb35e86b579ccd8f95933045100ddd45798e3586b17cbf47410c010a82e3b759
 Mode: guided
 Failure behavior: continue normal engineering if RepoLearn is unavailable
 Authority: this repository's existing engineering authority remains unchanged
@@ -108,6 +108,16 @@ added_time_ms_estimate
 added_context_tokens_estimate
 user_language
 language_alignment_valid
+response_opportunity_before_reveal
+answer_revealed_in_same_assistant_turn
+capture_user_judgment_identified
+capture_reasoning_feedback_specific
+capture_principle_plain_language
+capture_boundary_stated
+capture_learning_question_asked
+capture_before_bulk_engineering_output
+risk_first_raised_by_ai
+repeated_concept_in_session
 cue_fading_suppressed
 cue_level
 transfer_distance

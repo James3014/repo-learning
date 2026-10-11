@@ -30,6 +30,7 @@ class UserJudgmentSignal:
     explicit_position: bool = False
     explicit_prediction: bool = False
     explicit_risk_judgment: bool = False
+    risk_pointing_question: bool = False
     rationale_expressed: bool = False
     problem_framing_only: bool = False
     option_enumeration_only: bool = False
@@ -42,7 +43,12 @@ class UserJudgmentSignal:
     def meaningful_pre_evidence_judgment(self) -> bool:
         if not self.pre_feedback or self.decisive_evidence_already_revealed:
             return False
-        return self.explicit_position or self.explicit_prediction or self.explicit_risk_judgment
+        return (
+            self.explicit_position
+            or self.explicit_prediction
+            or self.explicit_risk_judgment
+            or self.risk_pointing_question
+        )
 
 
 def select_guided_branch(
@@ -54,6 +60,9 @@ def select_guided_branch(
 
     if signal.meaningful_pre_evidence_judgment:
         return GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
+    if signal.decisive_evidence_already_revealed or not signal.pre_feedback:
+        # A prompt after the answer is out can only collect post-evidence agreement.
+        return GuidedBranch.EXPOSURE_ONLY
     if not response_opportunity_available:
         return GuidedBranch.EXPOSURE_ONLY
     return GuidedBranch.JUDGMENT_PROMPT
@@ -84,6 +93,10 @@ class InteractionDefect(str, Enum):
     RESPONSE_RELEVANCE_DEFECT = "RESPONSE_RELEVANCE_DEFECT"
     ENGINEERING_BLOCKING_DEFECT = "ENGINEERING_BLOCKING_DEFECT"
     NO_RESPONSE_OPPORTUNITY_DEFECT = "NO_RESPONSE_OPPORTUNITY_DEFECT"
+    SPONTANEOUS_CAPTURE_REQUIZ_DEFECT = "SPONTANEOUS_CAPTURE_REQUIZ_DEFECT"
+    SPONTANEOUS_CAPTURE_QUALITY_DEFECT = "SPONTANEOUS_CAPTURE_QUALITY_DEFECT"
+    CUE_ATTRIBUTION_DEFECT = "CUE_ATTRIBUTION_DEFECT"
+    REPEATED_LEARNING_INTERACTION_DEFECT = "REPEATED_LEARNING_INTERACTION_DEFECT"
 
 
 @dataclass(frozen=True)
@@ -122,6 +135,36 @@ class PromptDeliveryObservation:
 
 
 @dataclass(frozen=True)
+class SpontaneousCaptureObservation:
+    """Observed shape of a spontaneous capture; ``None`` means not observed."""
+
+    user_judgment_identified: bool | None
+    reasoning_feedback_specific: bool | None
+    principle_plain_language: bool | None
+    boundary_stated: bool | None
+    learning_question_asked: bool | None
+    before_bulk_engineering_output: bool | None
+
+    @property
+    def defects(self) -> tuple[InteractionDefect, ...]:
+        defects: list[InteractionDefect] = []
+        if self.learning_question_asked is not False:
+            defects.append(InteractionDefect.SPONTANEOUS_CAPTURE_REQUIZ_DEFECT)
+        if not all(
+            value is True
+            for value in (
+                self.user_judgment_identified,
+                self.reasoning_feedback_specific,
+                self.principle_plain_language,
+                self.boundary_stated,
+                self.before_bulk_engineering_output,
+            )
+        ):
+            defects.append(InteractionDefect.SPONTANEOUS_CAPTURE_QUALITY_DEFECT)
+        return tuple(defects)
+
+
+@dataclass(frozen=True)
 class InteractionObservationReceipt:
     """Privacy-safe interaction receipt with provenance and contract attestation."""
 
@@ -157,6 +200,14 @@ class InteractionObservationReceipt:
     language_alignment_valid: bool | None = None
     response_opportunity_before_reveal: bool = True
     answer_revealed_in_same_assistant_turn: bool = False
+    capture_user_judgment_identified: bool | None = None
+    capture_reasoning_feedback_specific: bool | None = None
+    capture_principle_plain_language: bool | None = None
+    capture_boundary_stated: bool | None = None
+    capture_learning_question_asked: bool | None = None
+    capture_before_bulk_engineering_output: bool | None = None
+    risk_first_raised_by_ai: bool = False
+    repeated_concept_in_session: bool = False
 
     def __post_init__(self) -> None:
         if not self.task_id.strip():
@@ -184,6 +235,8 @@ class InteractionObservationReceipt:
             if self.evaluator_id == self.generator_id:
                 raise ValueError("independent LLM evaluator must differ from generator_id")
         if self.trigger_selected and self.selected_branch is not None:
+            # spontaneous_judgment_present means a user-authored judgment
+            # expressed before feedback and before decisive evidence.
             if self.spontaneous_judgment_present:
                 expected_branch = GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
             elif not self.response_opportunity_before_reveal:
@@ -205,6 +258,20 @@ class InteractionObservationReceipt:
             defects.append(InteractionDefect.ENGINEERING_BLOCKING_DEFECT)
         if not self.branch_selection_valid:
             defects.append(InteractionDefect.GUIDED_BRANCH_SELECTION_DEFECT)
+        if self.trigger_selected and self.repeated_concept_in_session:
+            defects.append(InteractionDefect.REPEATED_LEARNING_INTERACTION_DEFECT)
+        if self.selected_branch is GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE:
+            capture = SpontaneousCaptureObservation(
+                user_judgment_identified=self.capture_user_judgment_identified,
+                reasoning_feedback_specific=self.capture_reasoning_feedback_specific,
+                principle_plain_language=self.capture_principle_plain_language,
+                boundary_stated=self.capture_boundary_stated,
+                learning_question_asked=self.capture_learning_question_asked,
+                before_bulk_engineering_output=self.capture_before_bulk_engineering_output,
+            )
+            defects.extend(capture.defects)
+            if self.risk_first_raised_by_ai and self.cue_level == "NONE":
+                defects.append(InteractionDefect.CUE_ATTRIBUTION_DEFECT)
         if self.selected_branch is GuidedBranch.JUDGMENT_PROMPT:
             prompt = PromptDeliveryObservation(
                 prompt_generated=self.prompt_generated,
@@ -310,4 +377,12 @@ class InteractionObservationReceipt:
             "response_opportunity_before_reveal": self.response_opportunity_before_reveal,
             "answer_revealed_in_same_assistant_turn": self.answer_revealed_in_same_assistant_turn,
             "assessable_pre_evidence_prompt_response": self.assessable_pre_evidence_prompt_response,
+            "capture_user_judgment_identified": self.capture_user_judgment_identified,
+            "capture_reasoning_feedback_specific": self.capture_reasoning_feedback_specific,
+            "capture_principle_plain_language": self.capture_principle_plain_language,
+            "capture_boundary_stated": self.capture_boundary_stated,
+            "capture_learning_question_asked": self.capture_learning_question_asked,
+            "capture_before_bulk_engineering_output": self.capture_before_bulk_engineering_output,
+            "risk_first_raised_by_ai": self.risk_first_raised_by_ai,
+            "repeated_concept_in_session": self.repeated_concept_in_session,
         }

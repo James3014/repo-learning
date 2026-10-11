@@ -1,0 +1,106 @@
+{
+  "schema": "repolearn.guided_branch_cases.v1",
+  "purpose": "Synthetic, labelled branch oracle for evaluators. Not natural dogfood evidence and not G5 evidence.",
+  "cases": [
+    {
+      "id": "zh-dual-writer-question",
+      "issue_13_example": true,
+      "user_message": "為什麼兩邊都可以改？",
+      "signal": {"risk_pointing_question": true},
+      "expected_branch": "SPONTANEOUS_JUDGMENT_CAPTURE",
+      "note": "Names a specific suspected risk: two owners can change the same truth."
+    },
+    {
+      "id": "zh-coupling-question",
+      "issue_13_example": true,
+      "user_message": "這兩件事為什麼綁在一起？",
+      "signal": {"risk_pointing_question": true},
+      "expected_branch": "SPONTANEOUS_JUDGMENT_CAPTURE",
+      "note": "Names a suspected coupling of unrelated responsibilities."
+    },
+    {
+      "id": "zh-merge-vs-runtime-question",
+      "issue_13_example": true,
+      "user_message": "現在只是 merge，production 真的有跑嗎？",
+      "signal": {"risk_pointing_question": true},
+      "expected_branch": "SPONTANEOUS_JUDGMENT_CAPTURE",
+      "note": "Doubts that source state equals runtime state."
+    },
+    {
+      "id": "zh-unstable-activation-question",
+      "issue_13_example": true,
+      "user_message": "這是一個 repo，為什麼要靠 Skill 不穩定觸發？",
+      "signal": {"risk_pointing_question": true},
+      "expected_branch": "SPONTANEOUS_JUDGMENT_CAPTURE",
+      "note": "Challenges an unreliable activation mechanism for a stable owner."
+    },
+    {
+      "id": "zh-too-heavy-question",
+      "issue_13_example": true,
+      "user_message": "這樣不是太重了嗎？",
+      "signal": {"risk_pointing_question": true},
+      "expected_branch": "SPONTANEOUS_JUDGMENT_CAPTURE",
+      "note": "Names a suspected cost: the mechanism outweighs its value."
+    },
+    {
+      "id": "zh-neutral-information-question",
+      "issue_13_example": false,
+      "user_message": "這個 module 在做什麼？",
+      "signal": {"question_only": true},
+      "expected_branch": "JUDGMENT_PROMPT",
+      "note": "Asks for information; no suspected risk or direction."
+    },
+    {
+      "id": "zh-option-listing-without-lean",
+      "issue_13_example": false,
+      "user_message": "可以用 A 或 B，你覺得哪個好？",
+      "signal": {"option_enumeration_only": true},
+      "expected_branch": "JUDGMENT_PROMPT",
+      "note": "Lists alternatives without a lean."
+    },
+    {
+      "id": "zh-uncertainty-only",
+      "issue_13_example": false,
+      "user_message": "我不太確定這裡要怎麼處理。",
+      "signal": {"uncertainty_only": true},
+      "expected_branch": "JUDGMENT_PROMPT",
+      "note": "Uncertainty without a directional judgment."
+    },
+    {
+      "id": "zh-post-reveal-agreement",
+      "issue_13_example": false,
+      "context": "The assistant already concluded that only one side should own the value.",
+      "user_message": "對，應該只有一邊能改。",
+      "signal": {"explicit_position": true, "decisive_evidence_already_revealed": true},
+      "expected_branch": "EXPOSURE_ONLY",
+      "note": "Agreement after the answer was revealed is never spontaneous judgment, and a prompt now could only collect agreement."
+    },
+    {
+      "id": "zh-mixed-question-intuition-execute",
+      "issue_13_example": false,
+      "user_message": "這兩個為什麼綁在一起？感覺應該拆開。先幫我把測試跑過。",
+      "signal": {"risk_pointing_question": true, "explicit_position": true},
+      "expected_branch": "SPONTANEOUS_JUDGMENT_CAPTURE",
+      "note": "Capture briefly, then run the tests; the engineering request is not delayed."
+    },
+    {
+      "id": "zh-ai-cued-judgment",
+      "issue_13_example": false,
+      "context": "An earlier assistant message pointed out that two components write the same value.",
+      "user_message": "那兩邊都能改不太好吧。",
+      "signal": {"explicit_risk_judgment": true},
+      "risk_first_raised_by_ai": true,
+      "expected_branch": "SPONTANEOUS_JUDGMENT_CAPTURE",
+      "note": "Capturable, but cued evidence: cue level must not be NONE."
+    },
+    {
+      "id": "no-judgment-no-response-opportunity",
+      "issue_13_example": false,
+      "user_message": "Ship the fix now; production is down.",
+      "signal": {},
+      "response_opportunity_available": false,
+      "expected_branch": "EXPOSURE_ONLY",
+      "note": "No user judgment and no chance to answer before the answer must be acted on."
+    }
+  ]
+}

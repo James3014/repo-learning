@@ -95,7 +95,7 @@ def test_spontaneous_judgment_capture_does_not_requiz():
     assert "Do not re-ask a qualifying judgment" in SKILL
     assert "give bounded feedback on the reasoning rather than mere agreement" in SKILL
     assert "extract one reusable principle in plain language" in SKILL
-    assert "state one important applicability boundary or counterexample" in SKILL
+    assert "state (not ask) one important applicability boundary or counterexample" in SKILL
     assert "Do not re-ask a qualifying judgment" in POLICY
     assert "give bounded feedback on the reasoning rather than mere agreement" in POLICY
 
@@ -115,7 +115,8 @@ def test_only_pre_feedback_user_reasoning_can_count_as_mastery_evidence():
 
 
 def test_post_evidence_agreement_is_not_spontaneous_pre_evidence_judgment():
-    assert "decisive evidence has not already supplied the answer" in SKILL
+    assert "before decisive evidence for that point appeared" in SKILL
+    assert "Timing is relative to the user's statement" in SKILL
     assert "If decisive evidence or the relevant answer was already revealed before the user's statement" in POLICY
     assert "do not relabel later agreement or paraphrase as spontaneous pre-evidence judgment" in POLICY
 

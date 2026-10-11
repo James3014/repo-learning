@@ -48,6 +48,7 @@
       "enum": [
         "JUDGMENT_PROMPT",
         "SPONTANEOUS_JUDGMENT_CAPTURE",
+        "EXPOSURE_ONLY",
         null
       ]
     },
@@ -111,7 +112,12 @@
         "PRE_EVIDENCE_ORDERING_DEFECT",
         "LANGUAGE_ALIGNMENT_DEFECT",
         "RESPONSE_RELEVANCE_DEFECT",
-        "ENGINEERING_BLOCKING_DEFECT"
+        "ENGINEERING_BLOCKING_DEFECT",
+        "NO_RESPONSE_OPPORTUNITY_DEFECT",
+        "SPONTANEOUS_CAPTURE_REQUIZ_DEFECT",
+        "SPONTANEOUS_CAPTURE_QUALITY_DEFECT",
+        "CUE_ATTRIBUTION_DEFECT",
+        "REPEATED_LEARNING_INTERACTION_DEFECT"
       ]
     },
     "interaction_defects": {
@@ -126,7 +132,12 @@
           "PRE_EVIDENCE_ORDERING_DEFECT",
           "LANGUAGE_ALIGNMENT_DEFECT",
           "RESPONSE_RELEVANCE_DEFECT",
-          "ENGINEERING_BLOCKING_DEFECT"
+          "ENGINEERING_BLOCKING_DEFECT",
+          "NO_RESPONSE_OPPORTUNITY_DEFECT",
+          "SPONTANEOUS_CAPTURE_REQUIZ_DEFECT",
+          "SPONTANEOUS_CAPTURE_QUALITY_DEFECT",
+          "CUE_ATTRIBUTION_DEFECT",
+          "REPEATED_LEARNING_INTERACTION_DEFECT"
         ]
       }
     },
@@ -224,6 +235,57 @@
         "null"
       ],
       "maxLength": 120
+    },
+    "response_opportunity_before_reveal": {
+      "type": "boolean"
+    },
+    "answer_revealed_in_same_assistant_turn": {
+      "type": "boolean"
+    },
+    "assessable_pre_evidence_prompt_response": {
+      "type": "boolean"
+    },
+    "risk_first_raised_by_ai": {
+      "type": "boolean"
+    },
+    "repeated_concept_in_session": {
+      "type": "boolean"
+    },
+    "capture_user_judgment_identified": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "capture_reasoning_feedback_specific": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "capture_principle_plain_language": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "capture_boundary_stated": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "capture_learning_question_asked": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "capture_before_bulk_engineering_output": {
+      "type": [
+        "boolean",
+        "null"
+      ]
     }
   }
 }
