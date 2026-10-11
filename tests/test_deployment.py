@@ -79,3 +79,33 @@ def test_contract_identity_rejects_malformed_fingerprint():
         assert "content_sha256" in str(exc)
     else:
         raise AssertionError("malformed fingerprint must fail")
+
+
+def test_missing_control_file_is_not_current_issue_50(tmp_path):
+    import shutil
+    import pytest
+
+    root = tmp_path / "skills"
+    assert sync_skill_install(SKILL_ROOT, root).current is True
+    installed = root / "repo-learning"
+    (installed / "SKILL.md").unlink()
+    (installed / "references" / "policy.md").unlink()
+    attestation = inspect_skill_directory(installed)
+    assert attestation.current is False
+    assert attestation.defect is DeploymentDefect.CONTENT_FINGERPRINT_MISMATCH
+    assert sync_skill_install(SKILL_ROOT, root, check_only=True).current is False
+
+    source = tmp_path / "src-skill"
+    shutil.copytree(SKILL_ROOT, source)
+    (source / "references" / "state-contract.md").unlink()
+    with pytest.raises(ValueError, match="CONTENT_FINGERPRINT_MISMATCH"):
+        sync_skill_install(source, tmp_path / "other-root")
+
+
+def test_unfingerprinted_non_loaded_attestation_is_not_current_issue_50():
+    from repolearn import ContractAttestation
+
+    for stage in (DeploymentStage.SOURCE, DeploymentStage.PACKAGE, DeploymentStage.INSTALLED):
+        a = ContractAttestation(stage=stage, expected=CURRENT_CONTRACT, observed=CURRENT_CONTRACT)
+        assert a.current is False
+        assert a.defect is DeploymentDefect.CONTENT_FINGERPRINT_MISMATCH

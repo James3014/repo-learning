@@ -62,7 +62,8 @@ def event(
         },
         "assessment": {
             "classification": classification,
-            "recommended_level": "L3",
+            # SAME_STRUCTURE transfer cannot evidence L3 (assess_judgment ceiling is L2).
+            "recommended_level": "L2" if transfer_distance == "SAME_STRUCTURE" else "L3",
             "rationale": "bounded fixture",
         },
     }

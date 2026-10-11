@@ -17,6 +17,7 @@ import tempfile
 from typing import Any
 
 from .cue_policy import _parse_datetime, derive_fading_decision
+from .event_validation import validate_learning_event
 from .state import StateBackend, StateUnavailableError
 
 
@@ -176,6 +177,7 @@ class LocalFileBackend(StateBackend):
             if _canonical_json(existing) == canonical:
                 return event_id
             raise BackendConflictError(f"event_id {event_id!r} already exists with different content")
+        validate_learning_event(event, prior_events=events)
 
         path = self._events_path(profile_id)
         path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
