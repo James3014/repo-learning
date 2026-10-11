@@ -61,7 +61,9 @@ class ContractAttestation:
             return False
         if self.computed_content_sha256 is not None:
             return self.computed_content_sha256 == self.expected.content_sha256
-        return True
+        # A filesystem tree that was not fingerprinted is never current; only the
+        # LOADED stage has no tree to fingerprint.
+        return self.stage == DeploymentStage.LOADED
 
     @property
     def defect(self) -> DeploymentDefect:
@@ -69,10 +71,10 @@ class ContractAttestation:
             return DeploymentDefect.MISSING
         if self.observed != self.expected:
             return DeploymentDefect.CONTRACT_IDENTITY_MISMATCH
-        if (
-            self.computed_content_sha256 is not None
-            and self.computed_content_sha256 != self.expected.content_sha256
-        ):
+        if self.computed_content_sha256 is None:
+            if self.stage != DeploymentStage.LOADED:
+                return DeploymentDefect.CONTENT_FINGERPRINT_MISMATCH
+        elif self.computed_content_sha256 != self.expected.content_sha256:
             return DeploymentDefect.CONTENT_FINGERPRINT_MISMATCH
         return DeploymentDefect.NONE
 
