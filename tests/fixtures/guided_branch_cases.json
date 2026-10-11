@@ -96,11 +96,11 @@
     {
       "id": "no-judgment-no-response-opportunity",
       "issue_13_example": false,
-      "user_message": "Ship the fix now; production is down.",
+      "user_message": "直接幫我改好，這次回覆就要看到改完的結果。",
       "signal": {},
       "response_opportunity_available": false,
       "expected_branch": "EXPOSURE_ONLY",
-      "note": "No user judgment and no chance to answer before the answer must be acted on."
+      "note": "Not urgent (urgent work is a NO_TRIGGER hard suppressor), but the answer must be acted on in this reply, so there is no response opportunity."
     }
   ]
 }

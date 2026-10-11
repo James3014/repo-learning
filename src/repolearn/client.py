@@ -128,6 +128,7 @@ def prepare_learning_decision(
     judgment_signal: UserJudgmentSignal | None = None,
     response_opportunity_available: bool = True,
     already_handled_concepts: Iterable[str] = (),
+    learning_interactions_in_task: int = 0,
     now: datetime | None = None,
 ) -> ClientLearningDecision:
     """Load bounded state and choose a non-blocking learning interaction.
@@ -155,6 +156,7 @@ def prepare_learning_decision(
             candidate_concepts=candidate_concepts,
             silently_faded_concepts=_silently_faded_concepts(state, now=now),
             already_handled_concepts=already_handled_concepts,
+            learning_interactions_in_task=learning_interactions_in_task,
         )
 
     visible_learning_allowed = (

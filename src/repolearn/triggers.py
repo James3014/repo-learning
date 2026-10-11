@@ -80,6 +80,7 @@ def select_learning_opportunity(
     candidate_concepts: Iterable[str],
     silently_faded_concepts: Iterable[str] = (),
     already_handled_concepts: Iterable[str] = (),
+    learning_interactions_in_task: int = 0,
 ) -> TriggerResult:
     """Select zero or one learning point before deep learning-only research.
 
@@ -89,7 +90,8 @@ def select_learning_opportunity(
     state may suppress a concept only when it explicitly supports silent cue
     fading; chat memory alone must not be translated into this set. A concept
     that already received a learning interaction in the same task or session
-    is not selected again.
+    is not selected again, and a task that already had a learning interaction
+    gets no second one.
     """
 
     if mode is InteractionMode.OBSERVE:
@@ -106,6 +108,11 @@ def select_learning_opportunity(
         if suppressed:
             return TriggerResult(TriggerDisposition.NO_TRIGGER, reason=reason)
 
+    if learning_interactions_in_task < 0:
+        raise ValueError("learning_interactions_in_task must be >= 0")
+    if learning_interactions_in_task:
+        return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="task_learning_interaction_used")
+
     if (
         context.activation_source is ActivationSource.AUTO_DISCOVERY
         and not context.automatic_discovery_trigger_eligible
@@ -113,7 +120,7 @@ def select_learning_opportunity(
         return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="auto_discovery_not_eligible")
 
     faded = {concept.strip() for concept in silently_faded_concepts if concept.strip()}
-    handled = {concept.strip() for concept in already_handled_concepts if concept.strip()}
+    handled = {concept.strip().casefold() for concept in already_handled_concepts if concept.strip()}
     saw_candidate = False
     saw_faded_candidate = False
     saw_handled_candidate = False
@@ -122,7 +129,7 @@ def select_learning_opportunity(
         if not normalized:
             continue
         saw_candidate = True
-        if normalized in handled:
+        if normalized.casefold() in handled:
             saw_handled_candidate = True
             continue
         if normalized in faded:
