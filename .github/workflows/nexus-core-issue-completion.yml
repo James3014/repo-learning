@@ -1,5 +1,9 @@
 name: Nexus Core issue completion
 
+# Threat model: docs/CI_THREAT_MODEL.md
+# This job runs on pull_request_target and executes the PR head, so it is
+# same-repository only. Fork PRs fail closed at the first step.
+
 on:
   pull_request_target:
     branches: [main]
@@ -21,6 +25,19 @@ jobs:
       UV_TOOL_DIR: /tmp/nexus-core-tools
       UV_TOOL_BIN_DIR: /tmp/nexus-core-bin
     steps:
+      - name: Reject fork pull requests
+        id: same-repo-guard
+        shell: bash
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [ "$HEAD_REPO" != "$BASE_REPO" ]; then
+            echo "NEXUS_CORE_FORK_PR_UNSUPPORTED: head repo '$HEAD_REPO' is not '$BASE_REPO'; see docs/CI_THREAT_MODEL.md" >&2
+            exit 1
+          fi
+
       - name: Checkout exact pull-request head
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.2.2
         with:
