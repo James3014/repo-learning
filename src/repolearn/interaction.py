@@ -37,6 +37,8 @@ class UserJudgmentSignal:
     question_only: bool = False
     uncertainty_only: bool = False
     pre_feedback: bool = True
+    # True only when decisive evidence for the selected point appeared before
+    # the user's statement; evidence revealed afterwards does not disqualify it.
     decisive_evidence_already_revealed: bool = False
 
     @property
@@ -208,12 +210,16 @@ class InteractionObservationReceipt:
     capture_before_bulk_engineering_output: bool | None = None
     risk_first_raised_by_ai: bool = False
     repeated_concept_in_session: bool = False
+    decisive_evidence_before_user_judgment: bool = False
+    prior_learning_interactions_in_task: int = 0
 
     def __post_init__(self) -> None:
         if not self.task_id.strip():
             raise ValueError("task_id must be non-empty")
         if not self.trigger_selected and self.selected_branch is not None:
             raise ValueError("no-trigger receipt cannot select a guided branch")
+        if self.prior_learning_interactions_in_task < 0:
+            raise ValueError("prior_learning_interactions_in_task must be >= 0")
         if self.added_turns < 0:
             raise ValueError("added_turns must be >= 0")
         if self.added_time_ms_estimate is not None and self.added_time_ms_estimate < 0:
@@ -239,7 +245,10 @@ class InteractionObservationReceipt:
             # expressed before feedback and before decisive evidence.
             if self.spontaneous_judgment_present:
                 expected_branch = GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE
-            elif not self.response_opportunity_before_reveal:
+            elif (
+                self.decisive_evidence_before_user_judgment
+                or not self.response_opportunity_before_reveal
+            ):
                 expected_branch = GuidedBranch.EXPOSURE_ONLY
             else:
                 expected_branch = GuidedBranch.JUDGMENT_PROMPT
@@ -258,7 +267,9 @@ class InteractionObservationReceipt:
             defects.append(InteractionDefect.ENGINEERING_BLOCKING_DEFECT)
         if not self.branch_selection_valid:
             defects.append(InteractionDefect.GUIDED_BRANCH_SELECTION_DEFECT)
-        if self.trigger_selected and self.repeated_concept_in_session:
+        if self.trigger_selected and (
+            self.repeated_concept_in_session or self.prior_learning_interactions_in_task
+        ):
             defects.append(InteractionDefect.REPEATED_LEARNING_INTERACTION_DEFECT)
         if self.selected_branch is GuidedBranch.SPONTANEOUS_JUDGMENT_CAPTURE:
             capture = SpontaneousCaptureObservation(
@@ -385,4 +396,6 @@ class InteractionObservationReceipt:
             "capture_before_bulk_engineering_output": self.capture_before_bulk_engineering_output,
             "risk_first_raised_by_ai": self.risk_first_raised_by_ai,
             "repeated_concept_in_session": self.repeated_concept_in_session,
+            "decisive_evidence_before_user_judgment": self.decisive_evidence_before_user_judgment,
+            "prior_learning_interactions_in_task": self.prior_learning_interactions_in_task,
         }

@@ -104,6 +104,9 @@ def capture_contract_violations(text: str) -> list[str]:
         "before the bulk of the engineering output",
         "In the user's current language",
         "it is cued evidence, not spontaneous no-cue evidence",
+        "in at most about five sentences",
+        "never waits for or invites a user reply before engineering continues",
+        "a why/how question that only asks how something works",
     )
     violations.extend(f"missing: {phrase}" for phrase in required if phrase not in branch)
     forbidden = (
@@ -112,6 +115,14 @@ def capture_contract_violations(text: str) -> list[str]:
         r"treat\w* the user's agreement",
         r"agreement[^.]*as (spontaneous|mastery|judgment) (judgment )?evidence",
         r"restate the principle",
+        r"\bwait for (that|the user|their|a reply|an answer)",
+        r"\binvit\w* the user to\b",
+        r"\bparagraphs?\b",
+        r"\btutorial\b",
+        r"\b(any|every) question\b",
+        r"\bstarts? with (why|how)\b",
+        r"\blater agreement\b[^.]*\bcounts?\b",
+        r"agreement[^.]*\bstill counts?\b",
     )
     violations.extend(
         f"forbidden: {pattern}" for pattern in forbidden if re.search(pattern, branch, re.IGNORECASE)
@@ -129,8 +140,8 @@ def test_review_counterexample_is_caught():
         "When uncertain whether a real judgment exists, use `JUDGMENT_PROMPT`",
         "When uncertain whether a real judgment exists, use `SPONTANEOUS_JUDGMENT_CAPTURE`",
     ).replace(
-        "The capture contains no learning question.",
-        "The capture contains no learning question. Before continuing, ask the user one follow-up "
+        "never waits for or invites a user reply before engineering continues.",
+        "never waits for or invites a user reply before engineering continues. Before continuing, ask the user one follow-up "
         "question checking whether they can restate the principle, and treat the user's agreement "
         "with your explanation as spontaneous judgment evidence.",
     )
@@ -143,7 +154,7 @@ def test_review_counterexample_is_caught():
 @pytest.mark.parametrize("text", [SKILL, POLICY], ids=["skill", "policy"])
 def test_repetition_is_a_bounded_hard_suppressor(text):
     assert "already given for this concept earlier in the same task or session" in text
-    assert "At most one learning interaction per task." in text
+    assert "At most one learning interaction per task, across all concepts." in text
 
 
 @pytest.mark.parametrize("text", [SKILL, POLICY], ids=["skill", "policy"])

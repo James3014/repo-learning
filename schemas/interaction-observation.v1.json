@@ -286,6 +286,13 @@
         "boolean",
         "null"
       ]
+    },
+    "decisive_evidence_before_user_judgment": {
+      "type": "boolean"
+    },
+    "prior_learning_interactions_in_task": {
+      "type": "integer",
+      "minimum": 0
     }
   }
 }
