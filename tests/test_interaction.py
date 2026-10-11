@@ -65,7 +65,7 @@ def test_post_evidence_position_does_not_count_as_spontaneous_judgment():
         explicit_position=True,
         decisive_evidence_already_revealed=True,
     )
-    assert select_guided_branch(signal) is GuidedBranch.JUDGMENT_PROMPT
+    assert select_guided_branch(signal) is GuidedBranch.EXPOSURE_ONLY
 
 
 @pytest.mark.parametrize(

@@ -79,6 +79,7 @@ def select_learning_opportunity(
     mode: InteractionMode,
     candidate_concepts: Iterable[str],
     silently_faded_concepts: Iterable[str] = (),
+    already_handled_concepts: Iterable[str] = (),
 ) -> TriggerResult:
     """Select zero or one learning point before deep learning-only research.
 
@@ -86,7 +87,9 @@ def select_learning_opportunity(
     qualifying architecture concept exists. Automatic discovery is deliberately
     stricter and requires the caller to mark the task eligible. Current bounded
     state may suppress a concept only when it explicitly supports silent cue
-    fading; chat memory alone must not be translated into this set.
+    fading; chat memory alone must not be translated into this set. A concept
+    that already received a learning interaction in the same task or session
+    is not selected again.
     """
 
     if mode is InteractionMode.OBSERVE:
@@ -110,13 +113,18 @@ def select_learning_opportunity(
         return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="auto_discovery_not_eligible")
 
     faded = {concept.strip() for concept in silently_faded_concepts if concept.strip()}
+    handled = {concept.strip() for concept in already_handled_concepts if concept.strip()}
     saw_candidate = False
     saw_faded_candidate = False
+    saw_handled_candidate = False
     for concept in candidate_concepts:
         normalized = concept.strip()
         if not normalized:
             continue
         saw_candidate = True
+        if normalized in handled:
+            saw_handled_candidate = True
+            continue
         if normalized in faded:
             saw_faded_candidate = True
             continue
@@ -126,6 +134,8 @@ def select_learning_opportunity(
             reason="high_value_candidate",
         )
 
+    if saw_candidate and saw_handled_candidate:
+        return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="already_handled_in_session")
     if saw_candidate and saw_faded_candidate:
         return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="cue_faded")
     return TriggerResult(TriggerDisposition.NO_TRIGGER, reason="no_candidate")
