@@ -164,3 +164,22 @@ def validate_learning_event(
         raise LearningEventValidationError(
             f"recommended_level {claimed} exceeds the attempt evidence ceiling {ceiling}"
         )
+
+
+def clamp_recommended_level(event: Mapping[str, Any], *, prior_level: str | None) -> str:
+    """Level a projection may credit for an already-persisted event.
+
+    Never exceeds the attempt-evidence ceiling, so a schema-valid event that
+    over-claims (or a hand-edited ledger line) cannot raise mastery. An event
+    whose attempt fields cannot be interpreted credits nothing (``UNASSESSED``).
+    """
+
+    assessment = event.get("assessment")
+    claimed = assessment.get("recommended_level") if isinstance(assessment, Mapping) else None
+    if claimed not in _LEVEL_ORDER:
+        return "UNASSESSED"
+    try:
+        ceiling = event_level_ceiling(event, prior_level=prior_level)
+    except (ValueError, TypeError, AttributeError):
+        return "UNASSESSED"
+    return claimed if _LEVEL_ORDER[claimed] <= _LEVEL_ORDER[ceiling] else ceiling
