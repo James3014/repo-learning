@@ -17,7 +17,7 @@ import tempfile
 from typing import Any
 
 from .cue_policy import _parse_datetime, derive_fading_decision
-from .event_validation import validate_learning_event
+from .event_validation import clamp_recommended_level, validate_learning_event
 from .state import StateBackend, StateUnavailableError
 
 
@@ -261,13 +261,22 @@ class LocalFileBackend(StateBackend):
                 current["last_event_id"] = event_id
                 current["last_observed_at"] = observed_at
 
+        clamped_prior: dict[tuple[Any, Any], str] = {}
         for event in events:
             capability = event.get("capability", {})
             assessment = event.get("assessment", {})
             attempt = event.get("attempt", {})
             domain = capability.get("domain") if isinstance(capability, Mapping) else None
             concept = capability.get("concept") if isinstance(capability, Mapping) else None
-            level = assessment.get("recommended_level") if isinstance(assessment, Mapping) else None
+            # Persisted events are untrusted: never credit more than the attempt
+            # evidence permits (Issue #51). Over-claims are clamped, not dropped.
+            prior_key = (domain, concept)
+            level = clamp_recommended_level(event, prior_level=clamped_prior.get(prior_key))
+            if level != "UNASSESSED" and (
+                prior_key not in clamped_prior
+                or _LEVEL_ORDER[level] > _LEVEL_ORDER[clamped_prior[prior_key]]
+            ):
+                clamped_prior[prior_key] = level
             observed_at = event.get("observed_at")
             event_id = event.get("event_id")
             reassessment_of = (
