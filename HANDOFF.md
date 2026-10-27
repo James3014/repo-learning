@@ -1,20 +1,20 @@
 # HANDOFF
 
-更新：2026-10-11 · by Claude · HEAD `4d18617`
+更新：2026-10-27 · by Claude (workspace-d9fe) · HEAD `a12a960`
 <!-- 規則見 AGENTS.md「Handoff」。上限 150 行；過期內容移到 docs/archive/HANDOFF-YYYY-MM.md。 -->
 
 ## ▶ 下一步（只放一件，必須帶 #Issue）
-#50 審查並落地 PR #54 中的 fail-closed 修正（缺少 control file 時 `install --check` 不再回報 CURRENT），之後跑 `nexus-certify issue-check --issue 50`。依據：最近更新的 open Issue（bug）；PR #54 為 clean、test 與 Nexus Core issue completion 皆綠。
+#60 待辦頁試行（2026-10-27 至 2026-11-10）：把「先選再看建議」放到 Owner 待辦頁，涵蓋所有工作中的 repo；11/10 依事先定好的標準判定，達標才把這條路寫回 RepoLearn 契約。試行期間契約凍結在 v5，不再改規則。
 
 ## 進行中
-- #50 / PR #54 Skill contract fingerprint 缺檔改為 not-current / `CONTENT_FINGERPRINT_MISMATCH`；待審查與合併。
-- #51 / PR #54 同一 PR 也讓 `append_learning_event` 以 `learning-event.v1` 驗證，並把 `recommended_level` clamp 到 assessment ceiling；合併後需另跑 `issue-check --issue 51`。
+- #60 試行由 Owner 待辦頁收資料（決定題先選再看建議，加上各 session 送來的「學習卡」）；判定標準寫在該 Issue。
 
 ## 待確認（沒有 Issue 號）
-- spontaneous-capture 合約（#47、#49 已合併）之後的下一步產品工作，目前沒有 open Issue。
+- 試行結束後是否保留 Nexus-new／devspace 的 AGENTS.md 指標：沒達標就移除，以省每個 session 讀規則的成本。
+- 學習證據的正式存放處：試行期間留在待辦頁資料庫；正式紀錄（Nexus Owner-learning Ledger）的寫回仍等 G7。
 
 ## 卡住 / 注意
-- PR #1（`repolearn/g1-generic-contracts`，2026-09-15）仍 open 且有衝突（dirty），內容看起來已被後續 main 取代；需決定關閉或 rebase。
-- PR #54 不使用 closing keyword，兩個 Issue 都要各自驗證後才能關。
-- #50/#51 來自 Nexus-new 的跨 repo invariant 稽核，Issue 本身不是實作授權；合併需另行授權。
+- G5（#5）在 2026-10-11 被關成 COMPLETED，但門檻沒達到：真實試用只有 2026-09-16 一天、2/6 件（見 #5 的 Day-1 回報；10/06、10/11 的回報也寫明未推進）。#5 已補 2026-10-27 更正留言，視為 **G5 未達成**。
+- 根本原因：guided prompt 假設 Owner 坐在寫程式的視窗前當場回答；現行做法是 session 不等 Owner，要 Owner 決定的事一律送待辦頁。9/16 之後沒有記錄到自然觸發。
+- PR #1 已於 2026-10-27 以「已被 main 取代」關閉。
 - 隱私邊界：使用者學習狀態與 mastery evidence 屬個人資料，不得寫入 repo 或 HANDOFF。
