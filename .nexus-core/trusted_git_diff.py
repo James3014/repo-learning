@@ -190,7 +190,7 @@ def _repo_snapshot(git: str) -> tuple[list[tuple[str, os.stat_result]], Path]:
     for required in (common / "objects", common / "refs", common / "HEAD", common / "config"):
         if not required.exists():
             _fail(f"required Git metadata is missing: {required}")
-    for name in ("objects", "refs", "HEAD", "packed-refs", "config", "config.worktree", "info", "info/attributes", "info/exclude", "shallow", "info/grafts", "commondir", "gitdir"):
+    for name in ("objects", "refs", "HEAD", "index", "index.lock", "packed-refs", "config", "config.worktree", "info", "info/attributes", "info/exclude", "shallow", "info/grafts", "commondir", "gitdir"):
         for root in dict.fromkeys(roots):
             item = root / name
             if item.exists() or item.is_symlink():

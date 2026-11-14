@@ -234,6 +234,22 @@ def test_git_admin_metadata_rejects_links_and_execution_files(tmp_path, monkeypa
         helper._git(path, ["diff", "--cached", "--check", "HEAD"], info, digest)
 
 
+@pytest.mark.parametrize("name", ["index", "index.lock"])
+def test_git_rejects_symlinked_index_metadata(tmp_path, monkeypatch, name):
+    _repo(tmp_path)
+    helper = _load_helper()
+    target = tmp_path / ".git" / name
+    if target.exists():
+        target.unlink()
+    outside = tmp_path / "outside-index"
+    outside.write_text("unsafe\n")
+    target.symlink_to(outside)
+    monkeypatch.chdir(tmp_path)
+    path, _, info, digest = helper._select()
+    with pytest.raises(SystemExit):
+        helper._git(path, ["diff", "--cached", "--check", "HEAD"], info, digest)
+
+
 def test_git_rejects_hardlinked_config(tmp_path, monkeypatch):
     _repo(tmp_path)
     helper = _load_helper()
