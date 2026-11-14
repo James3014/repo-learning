@@ -13,7 +13,6 @@ import pwd
 import stat
 import subprocess
 import sys
-import tomllib
 
 
 SETTING = "NEXUS_GIT_PATH"
@@ -39,8 +38,9 @@ def _config_path() -> str | None:
             continue
         _trusted_file(config, executable=False)
         try:
+            import tomllib
             value = tomllib.loads(config.read_text(encoding="utf-8")).get("trusted_executables", {}).get("git")
-        except (OSError, ValueError) as exc:
+        except (OSError, ValueError, ImportError) as exc:
             _fail(f"administrator config {config} is unreadable or invalid: {exc}")
         if value is not None:
             if not isinstance(value, str):
@@ -125,9 +125,23 @@ def _git(path: str, args: list[str], expected: os.stat_result, expected_digest: 
         _fail(f"{path} changed during trust validation")
     if _digest(path, current) != expected_digest:
         _fail(f"{path} changed after its SHA-256 was recorded")
-    env = dict(os.environ)
-    env["GIT_NO_REPLACE_OBJECTS"] = "1"
-    return subprocess.run([path, *args], env=env, text=True, capture_output=True, check=False)
+    env = {key: os.environ[key] for key in ("LANG", "LC_ALL", "LC_CTYPE", "TZ", "TMPDIR") if key in os.environ}
+    env.update({
+        "PATH": "/usr/bin:/bin",
+        "GIT_NO_REPLACE_OBJECTS": "1",
+        "GIT_CONFIG_NOSYSTEM": "1",
+        "GIT_CONFIG_GLOBAL": os.devnull,
+    })
+    result = subprocess.run([path, *args], env=env, text=True, capture_output=True, check=False)
+    after, after_resolved = _trusted_file(Path(path))
+    if (
+        after_resolved != path
+        or (after.st_dev, after.st_ino, after.st_mtime_ns, after.st_size)
+        != (current.st_dev, current.st_ino, current.st_mtime_ns, current.st_size)
+        or _digest(path, after) != expected_digest
+    ):
+        _fail(f"{path} changed while Git was running")
+    return result
 
 
 def main() -> int:

@@ -34,7 +34,7 @@ def test_issue_verifiers_reject_replacement_refs_and_disable_them(tmp_path):
     config = tomllib.loads((Path(__file__).parents[1] / ".nexus-core/config.toml").read_text())
     verifiers = {entry["id"]: entry for entry in config["verifiers"]}
     guarded_diff_check = list(verifiers["diff-check"]["command"])
-    assert guarded_diff_check == ["python3", ".nexus-core/trusted_git_diff.py"]
+    assert guarded_diff_check == ["/usr/bin/python3", ".nexus-core/trusted_git_diff.py"]
 
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     _install_verifier(tmp_path)
