@@ -1,6 +1,6 @@
 # HANDOFF
 
-更新：2026-11-14 · by Codex · HEAD `ec2ea92`
+更新：2026-11-15 · by Codex · HEAD `188b459`
 <!-- 規則見 AGENTS.md「Handoff」。上限 150 行；過期內容移到 docs/archive/HANDOFF-YYYY-MM.md。 -->
 
 ## ▶ 下一步（只放一件，必須帶 #Issue）
@@ -10,7 +10,7 @@
 - #60 試行由 Owner 待辦頁收資料（決定題先選再看建議，加上各 session 送來的「學習卡」）；判定標準寫在該 Issue。
 
 ## 待確認（沒有 Issue 號）
-- trusted Git policy draft 已整理至 `fix.patch`，focused tests pass；尚待 owner review/apply。
+- Trusted Git 結構修正在工作樹中；focused tests 與可收集的其餘測試通過。完整 pytest 因缺少 `jsonschema` 且網路/DNS 不可用而未能收集完成；本 worktree 沒有 `nexus-certify` 或 Nexus Core 指定測試路徑。
 - 試行結束後是否保留 Nexus-new／devspace 的 AGENTS.md 指標：沒達標就移除，以省每個 session 讀規則的成本。
 - 學習證據的正式存放處：試行期間留在待辦頁資料庫；正式紀錄（Nexus Owner-learning Ledger）的寫回仍等 G7。
 

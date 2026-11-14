@@ -16,7 +16,7 @@ applicability = "APPLICABLE"
 
 [[verifiers]]
 id = "diff-check"
-command = ["/usr/bin/env", "python3", ".nexus-core/trusted_git_diff.py"]
+command = ["/usr/bin/python3", ".nexus-core/trusted_git_diff.py"]
 timeout_seconds = 300
 logical_subject_id = "repolearn/diff-hygiene"
 evidence_kind = "static-check"

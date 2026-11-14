@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
 """Run the Issue diff verifier with a trusted, evidenced Git executable."""
 
 from __future__ import annotations
@@ -25,6 +25,12 @@ DEFAULTS = {
     "Darwin": ("/usr/bin/git", "/opt/homebrew/bin/git", "/usr/local/bin/git", "/opt/local/bin/git"),
 }
 APPROVED_INSTALLERS = ("_apt", "_installer", "brew", "nixbld")
+SAFE_CONFIG = (
+    ("core.fsmonitor", "false"), ("core.hooksPath", "/dev/null"),
+    ("core.sshCommand", ""), ("core.pager", "cat"), ("core.editor", ""),
+    ("core.askPass", ""), ("diff.external", ""), ("include.path", "/dev/null"),
+    ("includeIf.onbranch:main.path", "/dev/null"), ("protocol.ext.allow", "never"), ("credential.helper", ""),
+)
 
 
 def _fail(reason: str) -> "NoReturn":
@@ -96,6 +102,148 @@ def _digest(path: str, expected: os.stat_result) -> str:
         _fail(f"{path} could not be hashed: {exc}")
 
 
+def _git_env(*, audit: bool = False) -> dict[str, str]:
+    env = {key: os.environ[key] for key in ("LANG", "LC_ALL", "LC_CTYPE", "TZ", "TMPDIR") if key in os.environ}
+    env.update({"PATH": "/usr/bin:/bin", "GIT_NO_REPLACE_OBJECTS": "1", "GIT_ATTR_NOSYSTEM": "1"})
+    if audit:
+        # git config only reads values; expose system/global/worktree scopes for the policy scan.
+        for key in ("GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM"):
+            if key in os.environ:
+                env[key] = os.environ[key]
+        env.pop("GIT_CONFIG_NOSYSTEM", None)
+    else:
+        env.update({"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": os.devnull})
+    env["GIT_CONFIG_COUNT"] = str(len(SAFE_CONFIG))
+    for index, (key, value) in enumerate(SAFE_CONFIG):
+        env[f"GIT_CONFIG_KEY_{index}"] = key
+        env[f"GIT_CONFIG_VALUE_{index}"] = value
+    return env
+
+
+def _inside(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _lstat_chain(path: Path, *, recursive: bool = False) -> list[tuple[str, os.stat_result]]:
+    """Reject links in the path and its tree; return a stable inode snapshot."""
+    try:
+        absolute = path.absolute()
+        chain = list(reversed((absolute, *absolute.parents)))
+        snapshot = []
+        for item in chain:
+            info = item.lstat()
+            if stat.S_ISLNK(info.st_mode):
+                _fail(f"Git metadata path contains symlink: {item}")
+            snapshot.append((str(item), info))
+        if recursive and absolute.is_dir():
+            for base, dirs, files in os.walk(absolute, followlinks=False):
+                for name in dirs + files:
+                    child = Path(base, name)
+                    info = child.lstat()
+                    if stat.S_ISLNK(info.st_mode):
+                        _fail(f"Git metadata contains symlink: {child}")
+                    snapshot.append((str(child), info))
+        return snapshot
+    except OSError as exc:
+        _fail(f"Git metadata path {path} cannot be inspected: {exc}")
+
+
+def _repo_snapshot(git: str) -> tuple[list[tuple[str, os.stat_result]], Path]:
+    env = _git_env()
+    result = subprocess.run(
+        [git, "rev-parse", "--git-dir", "--git-common-dir", "--absolute-git-dir"],
+        cwd=Path.cwd(), env=env, text=True, capture_output=True, check=False,
+    )
+    if result.returncode:
+        _fail(f"cannot resolve repository Git directories: {result.stderr.strip()}")
+    values = result.stdout.splitlines()
+    if len(values) != 3:
+        _fail("Git returned incomplete repository directory paths")
+    cwd = Path.cwd().resolve(strict=True)
+    paths = [Path(v) if Path(v).is_absolute() else cwd / v for v in values]
+    for p in paths:
+        _lstat_chain(p)
+    gitdir, common, absolute = (p.resolve(strict=True) for p in paths)
+    if absolute != gitdir:
+        _fail("Git directory resolution is inconsistent")
+    worktree_admin = _inside(gitdir, common / "worktrees")
+    gitfile = cwd / ".git"
+    is_gitfile = False
+    try:
+        st = gitfile.lstat()
+        is_gitfile = stat.S_ISREG(st.st_mode)
+    except OSError:
+        pass
+    if not _inside(gitdir, cwd) and not (worktree_admin and is_gitfile):
+        _fail(f"Git directory {gitdir} is outside target repository {cwd}")
+    if not _inside(common, cwd) and not (worktree_admin and is_gitfile):
+        _fail(f"Git common directory {common} is outside target repository {cwd}")
+
+    roots = [gitdir, common]
+    snapshot: list[tuple[str, os.stat_result]] = []
+    for root in dict.fromkeys(roots):
+        snapshot.extend(_lstat_chain(root))
+    for required in (common / "objects", common / "refs", common / "HEAD", common / "config"):
+        if not required.exists():
+            _fail(f"required Git metadata is missing: {required}")
+    for name in ("objects", "refs", "HEAD", "packed-refs", "config", "config.worktree", "info", "info/attributes", "info/exclude", "shallow", "info/grafts", "commondir", "gitdir"):
+        for root in dict.fromkeys(roots):
+            item = root / name
+            if item.exists() or item.is_symlink():
+                snapshot.extend(_lstat_chain(item, recursive=name in ("objects", "refs")))
+                if name in ("config", "config.worktree"):
+                    info = item.lstat()
+                    if stat.S_ISREG(info.st_mode) and info.st_nlink > 1:
+                        _fail(f"Git config is hardlinked: {item}")
+                if name == "info/attributes" and item.stat().st_size:
+                    _fail(f"repository-local attributes file {item} is not empty")
+    for root in dict.fromkeys(roots):
+        for forbidden in (root / "objects/info/alternates", root / "refs/replace", root / "info/grafts"):
+            if forbidden.exists() or forbidden.is_symlink():
+                marker = " NEXUS_REPLACE_REFS_PRESENT" if forbidden.name == "replace" else ""
+                _fail(f"forbidden Git metadata exists: {forbidden}{marker}")
+    gitfile = cwd / ".git"
+    if not _inside(common, cwd):
+        try:
+            snapshot.extend(_lstat_chain(gitfile))
+            target_line = gitfile.read_text(encoding="utf-8").strip()
+            if not target_line.startswith("gitdir:") or (gitfile.parent / target_line[7:].strip()).resolve(strict=True) != gitdir:
+                _fail("worktree .git pointer does not resolve to its Git admin directory")
+            common_pointer = (gitdir / "commondir").read_text(encoding="utf-8").strip()
+            if (gitdir / common_pointer).resolve(strict=True) != common:
+                _fail("worktree commondir pointer does not resolve to the common Git directory")
+            gitdir_pointer = (gitdir / "gitdir").read_text(encoding="utf-8").strip()
+            if (gitdir / gitdir_pointer).resolve(strict=True) != gitfile.resolve(strict=True):
+                _fail("worktree gitdir pointer does not resolve to the target repository")
+        except OSError as exc:
+            _fail(f"worktree Git pointers cannot be inspected: {exc}")
+    snapshot = [(p, info) for p, info in snapshot if _inside(Path(p), cwd) or any(_inside(Path(p), root) for root in dict.fromkeys(roots))]
+    return snapshot, gitdir
+
+
+def _check_config(git: str) -> None:
+    env = _git_env(audit=True)
+    count = len(SAFE_CONFIG)
+    for i in range(count):
+        env.pop(f"GIT_CONFIG_KEY_{i}", None)
+        env.pop(f"GIT_CONFIG_VALUE_{i}", None)
+    env.pop("GIT_CONFIG_COUNT", None)
+    result = subprocess.run([git, "config", "--null", "--show-origin", "--list"], cwd=Path.cwd(), env=env, capture_output=True, check=False)
+    if result.returncode:
+        _fail("cannot inspect Git config from all scopes")
+    for record in result.stdout.decode("utf-8", "replace").split("\0"):
+        fields = record.splitlines()
+        key = fields[0].lower() if len(fields) >= 2 else ""
+        if key.startswith("filter.") or (key.startswith("diff.") and key.endswith((".command", ".textconv"))) or key in {
+            "core.fsmonitor", "core.hookspath", "include.path", "extensions.worktreeconfig",
+        } or key.startswith("includeif."):
+            _fail(f"execution-capable Git config is present: {key}")
+
+
 def _select() -> tuple[str, str, os.stat_result, str]:
     if SETTING in os.environ:
         raw, source = os.environ[SETTING], "environment"
@@ -125,22 +273,17 @@ def _git(path: str, args: list[str], expected: os.stat_result, expected_digest: 
         _fail(f"{path} changed during trust validation")
     if _digest(path, current) != expected_digest:
         _fail(f"{path} changed after its SHA-256 was recorded")
-    env = {key: os.environ[key] for key in ("LANG", "LC_ALL", "LC_CTYPE", "TZ", "TMPDIR") if key in os.environ}
-    env.update({
-        "PATH": "/usr/bin:/bin",
-        "GIT_NO_REPLACE_OBJECTS": "1",
-        "GIT_CONFIG_NOSYSTEM": "1",
-        "GIT_CONFIG_GLOBAL": os.devnull,
-        "GIT_ATTR_NOSYSTEM": "1",
-    })
+    before, _ = _repo_snapshot(path)
+    _check_config(path)
+    env = _git_env()
     command = [path]
     if args[:1] == ["diff"]:
-        info_attributes = Path.cwd() / ".git" / "info" / "attributes"
-        if info_attributes.exists() and info_attributes.stat().st_size:
-            _fail(f"repository-local attributes file {info_attributes} is not empty")
-        command.extend(["-c", "core.fsmonitor=false", "-c", "diff.external=", "-c", "core.hooksPath=/dev/null", "-c", "core.attributesFile=/dev/null"])
+        command.extend(["-c", "core.attributesFile=/dev/null"])
         args = [*args[:1], "--no-ext-diff", "--no-textconv", *args[1:]]
     result = subprocess.run([*command, *args], env=env, text=True, capture_output=True, check=False)
+    after_repo, _ = _repo_snapshot(path)
+    if [(p, (s.st_dev, s.st_ino, s.st_mtime_ns, s.st_ctime_ns, s.st_size)) for p, s in before] != [(p, (s.st_dev, s.st_ino, s.st_mtime_ns, s.st_ctime_ns, s.st_size)) for p, s in after_repo]:
+        _fail("Git repository metadata changed while Git was running")
     after, after_resolved = _trusted_file(Path(path))
     if (
         after_resolved != path
