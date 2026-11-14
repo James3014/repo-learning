@@ -361,3 +361,15 @@ def test_configured_interpreter_path_is_present_or_fails_clearly():
     config = tomllib.loads((ROOT / ".nexus-core/config.toml").read_text())
     command = next(v["command"] for v in config["verifiers"] if v["id"] == "diff-check")
     assert Path(command[0]).is_file(), f"absolute Python interpreter missing: {command[0]}"
+
+
+@pytest.mark.parametrize("config_text", ["[core]\n\tfsmonitor\n", '[filter "x"]\n\tclean\n', '[diff "x"]\n\ttextconv\n'])
+def test_git_rejects_valueless_execution_capable_config(tmp_path, monkeypatch, config_text):
+    _repo(tmp_path)
+    helper = _load_helper()
+    with (tmp_path / ".git/config").open("a") as config:
+        config.write("\n" + config_text)
+    monkeypatch.chdir(tmp_path)
+    path, _, info, digest = helper._select()
+    with pytest.raises(SystemExit):
+        helper._git(path, ["diff", "--cached", "--check", "HEAD"], info, digest)

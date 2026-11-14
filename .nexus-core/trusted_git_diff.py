@@ -236,8 +236,8 @@ def _check_config(git: str) -> None:
     if result.returncode:
         _fail("cannot inspect Git config from all scopes")
     for record in result.stdout.decode("utf-8", "replace").split("\0"):
-        fields = record.splitlines()
-        key = fields[0].lower() if len(fields) >= 2 else ""
+        # --null emits "origin\0key\nvalue\0"; a valueless key has no newline, so take the text before it.
+        key = record.split("\n", 1)[0].lower()
         if key.startswith("filter.") or (key.startswith("diff.") and key.endswith((".command", ".textconv"))) or key in {
             "core.fsmonitor", "core.hookspath", "include.path", "extensions.worktreeconfig",
         } or key.startswith("includeif."):
