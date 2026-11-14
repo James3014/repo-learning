@@ -131,8 +131,16 @@ def _git(path: str, args: list[str], expected: os.stat_result, expected_digest: 
         "GIT_NO_REPLACE_OBJECTS": "1",
         "GIT_CONFIG_NOSYSTEM": "1",
         "GIT_CONFIG_GLOBAL": os.devnull,
+        "GIT_ATTR_NOSYSTEM": "1",
     })
-    result = subprocess.run([path, *args], env=env, text=True, capture_output=True, check=False)
+    command = [path]
+    if args[:1] == ["diff"]:
+        info_attributes = Path.cwd() / ".git" / "info" / "attributes"
+        if info_attributes.exists() and info_attributes.stat().st_size:
+            _fail(f"repository-local attributes file {info_attributes} is not empty")
+        command.extend(["-c", "core.fsmonitor=false", "-c", "diff.external=", "-c", "core.hooksPath=/dev/null", "-c", "core.attributesFile=/dev/null"])
+        args = [*args[:1], "--no-ext-diff", "--no-textconv", *args[1:]]
+    result = subprocess.run([*command, *args], env=env, text=True, capture_output=True, check=False)
     after, after_resolved = _trusted_file(Path(path))
     if (
         after_resolved != path

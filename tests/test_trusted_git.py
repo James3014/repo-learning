@@ -23,10 +23,10 @@ def _repo(path: Path) -> None:
 def _run(path: Path, env: dict[str, str]) -> subprocess.CompletedProcess[str]:
     config = tomllib.loads((ROOT / ".nexus-core/config.toml").read_text())
     command = config["verifiers"][-1]["command"]
-    if command[1:2] == [".nexus-core/trusted_git_diff.py"]:
+    if command[-1:] == [".nexus-core/trusted_git_diff.py"]:
         verifier_dir = path / ".nexus-core"
         verifier_dir.mkdir(exist_ok=True)
-        (verifier_dir / "trusted_git_diff.py").write_bytes((ROOT / command[1]).read_bytes())
+        (verifier_dir / "trusted_git_diff.py").write_bytes((ROOT / command[-1]).read_bytes())
     return subprocess.run(command, cwd=path, env=env, text=True, capture_output=True)
 
 
@@ -157,6 +157,42 @@ def test_git_subprocess_env_is_allowlisted(monkeypatch):
     for key in ("GIT_INDEX_FILE", "GIT_DIR", "GIT_CONFIG_COUNT", "LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "SECRET_TOKEN"):
         assert key not in seen
     assert seen["GIT_NO_REPLACE_OBJECTS"] == "1"
+
+
+def test_diff_invocation_disables_repo_git_execution_and_attributes(tmp_path, monkeypatch):
+    _repo(tmp_path)
+    helper = _load_helper()
+    monkeypatch.chdir(tmp_path)
+    captured = []
+    real_run = subprocess.run
+
+    def spy(args, **kwargs):
+        captured.append((args, kwargs))
+        return real_run(args, **kwargs)
+
+    monkeypatch.setattr(helper.subprocess, "run", spy)
+    path, _, info, digest = helper._select()
+    helper._git(path, ["diff", "--cached", "--check", "HEAD"], info, digest)
+    args, options = captured[-1]
+    assert args[1:] == ["-c", "core.fsmonitor=false", "-c", "diff.external=", "-c", "core.hooksPath=/dev/null", "-c", "core.attributesFile=/dev/null", "diff", "--no-ext-diff", "--no-textconv", "--cached", "--check", "HEAD"]
+    assert options["env"]["GIT_ATTR_NOSYSTEM"] == "1"
+
+
+def test_diff_check_fails_closed_on_info_attributes(tmp_path, monkeypatch):
+    _repo(tmp_path)
+    helper = _load_helper()
+    info_attributes = tmp_path / ".git/info/attributes"
+    info_attributes.write_text("* textconv=unsafe\n")
+    monkeypatch.chdir(tmp_path)
+    path, _, info, digest = helper._select()
+    with pytest.raises(SystemExit):
+        helper._git(path, ["diff", "--cached", "--check", "HEAD"], info, digest)
+
+
+def test_diff_check_interpreter_is_safe_fallback_command():
+    config = tomllib.loads((ROOT / ".nexus-core/config.toml").read_text())
+    command = next(v["command"] for v in config["verifiers"] if v["id"] == "diff-check")
+    assert command[:2] == ["/usr/bin/env", "python3"]
 
 
 def test_git_is_revalidated_after_execution(monkeypatch):
