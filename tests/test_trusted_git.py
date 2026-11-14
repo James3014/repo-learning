@@ -274,6 +274,25 @@ def test_git_rejects_symlinked_metadata_directory(tmp_path, monkeypatch):
         helper._git(path, ["diff", "--cached", "--check", "HEAD"], git_info, digest)
 
 
+@pytest.mark.parametrize("relative", [
+    "FETCH_HEAD", "ORIG_HEAD", "logs/HEAD", "hooks/pre-commit", "refs/heads/nested/unsafe",
+])
+def test_git_rejects_symlink_anywhere_in_git_metadata_tree(tmp_path, monkeypatch, relative):
+    _repo(tmp_path)
+    helper = _load_helper()
+    target = tmp_path / ".git" / relative
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists() or target.is_symlink():
+        target.unlink()
+    outside = tmp_path / "outside-metadata"
+    outside.write_text("unsafe\n")
+    target.symlink_to(outside)
+    monkeypatch.chdir(tmp_path)
+    path, _, info, digest = helper._select()
+    with pytest.raises(SystemExit):
+        helper._git(path, ["diff", "--cached", "--check", "HEAD"], info, digest)
+
+
 @pytest.mark.parametrize("key,value", [
     ("filter.test.process", "unsafe"), ("filter.test.clean", "unsafe"),
     ("filter.test.smudge", "unsafe"), ("diff.test.command", "unsafe"),

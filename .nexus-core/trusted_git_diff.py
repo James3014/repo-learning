@@ -183,23 +183,33 @@ def _repo_snapshot(git: str) -> tuple[list[tuple[str, os.stat_result]], Path]:
     if not _inside(common, cwd) and not (worktree_admin and is_gitfile):
         _fail(f"Git common directory {common} is outside target repository {cwd}")
 
-    roots = [gitdir, common]
+    roots = list(dict.fromkeys((gitdir, common)))
     snapshot: list[tuple[str, os.stat_result]] = []
-    for root in dict.fromkeys(roots):
+    for root in roots:
         snapshot.extend(_lstat_chain(root))
+        try:
+            for base, dirs, files in os.walk(root, followlinks=False, onerror=lambda exc: _fail(f"Git metadata tree cannot be inspected: {exc}")):
+                for name in (*dirs, *files):
+                    item = Path(base, name)
+                    info = item.lstat()
+                    if stat.S_ISLNK(info.st_mode):
+                        _fail(f"Git metadata contains symlink: {item}")
+                    resolved_item = item.resolve(strict=True)
+                    if not (_inside(resolved_item, cwd) or any(_inside(resolved_item, allowed) for allowed in roots)):
+                        _fail(f"Git metadata escapes target repository: {item}")
+                    if item.name in ("config", "config.worktree") and stat.S_ISREG(info.st_mode) and info.st_nlink != 1:
+                        _fail(f"Git config is hardlinked: {item}")
+                    snapshot.append((str(item), info))
+        except OSError as exc:
+            _fail(f"Git metadata tree {root} cannot be inspected: {exc}")
     for required in (common / "objects", common / "refs", common / "HEAD", common / "config"):
         if not required.exists():
             _fail(f"required Git metadata is missing: {required}")
-    for name in ("objects", "refs", "HEAD", "index", "index.lock", "packed-refs", "config", "config.worktree", "info", "info/attributes", "info/exclude", "shallow", "info/grafts", "commondir", "gitdir"):
+    for name in ("info/attributes",):
         for root in dict.fromkeys(roots):
             item = root / name
             if item.exists() or item.is_symlink():
-                snapshot.extend(_lstat_chain(item, recursive=name in ("objects", "refs")))
-                if name in ("config", "config.worktree"):
-                    info = item.lstat()
-                    if stat.S_ISREG(info.st_mode) and info.st_nlink > 1:
-                        _fail(f"Git config is hardlinked: {item}")
-                if name == "info/attributes" and item.stat().st_size:
+                if item.stat().st_size:
                     _fail(f"repository-local attributes file {item} is not empty")
     for root in dict.fromkeys(roots):
         for forbidden in (root / "objects/info/alternates", root / "refs/replace", root / "info/grafts"):
@@ -221,7 +231,6 @@ def _repo_snapshot(git: str) -> tuple[list[tuple[str, os.stat_result]], Path]:
                 _fail("worktree gitdir pointer does not resolve to the target repository")
         except OSError as exc:
             _fail(f"worktree Git pointers cannot be inspected: {exc}")
-    snapshot = [(p, info) for p, info in snapshot if _inside(Path(p), cwd) or any(_inside(Path(p), root) for root in dict.fromkeys(roots))]
     return snapshot, gitdir
 
 
@@ -282,7 +291,7 @@ def _git(path: str, args: list[str], expected: os.stat_result, expected_digest: 
         args = [*args[:1], "--no-ext-diff", "--no-textconv", *args[1:]]
     result = subprocess.run([*command, *args], env=env, text=True, capture_output=True, check=False)
     after_repo, _ = _repo_snapshot(path)
-    if [(p, (s.st_dev, s.st_ino, s.st_mtime_ns, s.st_ctime_ns, s.st_size)) for p, s in before] != [(p, (s.st_dev, s.st_ino, s.st_mtime_ns, s.st_ctime_ns, s.st_size)) for p, s in after_repo]:
+    if [(p, (s.st_dev, s.st_ino, s.st_mode, s.st_size, s.st_mtime_ns)) for p, s in before] != [(p, (s.st_dev, s.st_ino, s.st_mode, s.st_size, s.st_mtime_ns)) for p, s in after_repo]:
         _fail("Git repository metadata changed while Git was running")
     after, after_resolved = _trusted_file(Path(path))
     if (
