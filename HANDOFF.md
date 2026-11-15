@@ -1,6 +1,6 @@
 # HANDOFF
 
-更新：2026-10-27 · by Claude (workspace-d9fe) · HEAD `a12a960`
+更新：2026-11-15 · by Codex · HEAD `ba7d3b4`
 <!-- 規則見 AGENTS.md「Handoff」。上限 150 行；過期內容移到 docs/archive/HANDOFF-YYYY-MM.md。 -->
 
 ## ▶ 下一步（只放一件，必須帶 #Issue）
@@ -8,6 +8,7 @@
 
 ## 進行中
 - #60 試行由 Owner 待辦頁收資料（決定題先選再看建議，加上各 session 送來的「學習卡」）；判定標準寫在該 Issue。
+- #63 補上兩個安全回歸測試；目標突變均能令測試失敗，指定三個測試檔全部通過。
 
 ## 待確認（沒有 Issue 號）
 - 試行結束後是否保留 Nexus-new／devspace 的 AGENTS.md 指標：沒達標就移除，以省每個 session 讀規則的成本。

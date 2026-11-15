@@ -8,12 +8,15 @@ RepoLearn cannot accidentally create a second writable mastery source of truth.
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+import errno
 from hashlib import sha256
+import inspect
 import json
 import os
 from pathlib import Path
 import re
-import tempfile
+import stat
+import uuid
 from typing import Any
 
 from .cue_policy import _parse_datetime, derive_fading_decision
@@ -44,6 +47,21 @@ class ReadOnlyCanonicalBackendError(RuntimeError):
 
 _LEVEL_ORDER = {"UNASSESSED": -1, "L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4}
 _SAFE_PROFILE = re.compile(r"^[A-Za-z0-9._-]+$")
+_DIR_FD_REQUIRED = (os.open, os.mkdir, os.stat, os.unlink, os.rmdir, os.rename)
+
+
+def _has_safe_dir_fd_support() -> bool:
+    return (
+        hasattr(os, "O_NOFOLLOW")
+        and hasattr(os, "O_DIRECTORY")
+        and all(operation in os.supports_dir_fd for operation in _DIR_FD_REQUIRED)
+        and {"src_dir_fd", "dst_dir_fd"}.issubset(inspect.signature(os.replace).parameters)
+        and os.stat in os.supports_follow_symlinks
+        and os.listdir in os.supports_fd
+    )
+
+
+_HAS_SAFE_DIR_FD = _has_safe_dir_fd_support()
 
 
 def _canonical_json(value: Mapping[str, Any]) -> str:
@@ -78,44 +96,81 @@ class LocalFileBackend(StateBackend):
     def __init__(self, root: str | Path) -> None:
         self.root = Path(root).expanduser()
 
-    def _profile_dir(self, profile_id: str) -> Path:
-        profiles = self.root / "profiles"
-        if profiles.is_symlink():
-            raise ValueError("profiles directory must not be a symlink")
-        path = profiles / _validate_profile_id(profile_id)
-        if path.is_symlink():
-            raise ValueError("profile path must not be a symlink")
-        return path
+    @staticmethod
+    def _require_dir_fd_support() -> None:
+        if not _HAS_SAFE_DIR_FD:
+            raise StateUnavailableError(
+                "local backend is unavailable: this platform lacks required no-follow directory-relative filesystem operations"
+            )
 
-    def _validate_profile_storage(self, profile_id: str) -> Path:
-        profile = self._profile_dir(profile_id)
-        if not profile.exists():
-            return profile
-        if not profile.is_dir():
-            raise BackendConflictError("profile path is not a directory")
-        for child in profile.iterdir():
-            if child.is_symlink():
-                raise ValueError("profile data files must not be symlinks")
-        return profile
-
-    def _events_path(self, profile_id: str) -> Path:
-        path = self._profile_dir(profile_id) / "events.jsonl"
-        if path.is_symlink():
-            raise ValueError("profile data files must not be symlinks")
-        return path
-
-    def _state_path(self, profile_id: str) -> Path:
-        path = self._profile_dir(profile_id) / "state.json"
-        if path.is_symlink():
-            raise ValueError("profile data files must not be symlinks")
-        return path
+    def _open_profile_dir(self, profile_id: str, *, create: bool = False, with_parent: bool = False) -> int | tuple[int, int]:
+        """Open a profile directory without following replaceable path components."""
+        self._require_dir_fd_support()
+        profile_id = _validate_profile_id(profile_id)
+        self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+        root_fd = os.open(self.root, flags)
+        try:
+            try:
+                profiles_fd = os.open("profiles", flags, dir_fd=root_fd)
+            except FileNotFoundError:
+                if not create:
+                    raise
+                os.mkdir("profiles", mode=0o700, dir_fd=root_fd)
+                profiles_fd = os.open("profiles", flags, dir_fd=root_fd)
+        except OSError as exc:
+            if exc.errno == errno.ELOOP:
+                raise ValueError("profiles directory must not be a symlink") from exc
+            raise
+        finally:
+            os.close(root_fd)
+        try:
+            try:
+                profile_fd = os.open(profile_id, flags, dir_fd=profiles_fd)
+            except FileNotFoundError:
+                if not create:
+                    raise
+                os.mkdir(profile_id, mode=0o700, dir_fd=profiles_fd)
+                profile_fd = os.open(profile_id, flags, dir_fd=profiles_fd)
+            except OSError as exc:
+                if exc.errno in {errno.ELOOP, errno.ENOTDIR}:
+                    try:
+                        info = os.stat(profile_id, dir_fd=profiles_fd, follow_symlinks=False)
+                    except FileNotFoundError:
+                        raise
+                    if stat.S_ISLNK(info.st_mode):
+                        raise ValueError("profile path must not be a symlink") from exc
+                    raise BackendConflictError("profile path is not a directory") from exc
+                raise
+        except BaseException:
+            os.close(profiles_fd)
+            raise
+        if with_parent:
+            return profile_fd, profiles_fd
+        os.close(profiles_fd)
+        return profile_fd
 
     def _read_events(self, profile_id: str) -> list[dict[str, Any]]:
-        path = self._events_path(profile_id)
-        if not path.exists():
+        self._require_dir_fd_support()
+        try:
+            profile_fd = self._open_profile_dir(profile_id)
+        except FileNotFoundError:
             return []
+        try:
+            try:
+                fd = os.open("events.jsonl", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=profile_fd)
+            except FileNotFoundError:
+                return []
+            except OSError as exc:
+                if exc.errno == errno.ELOOP:
+                    raise ValueError("profile data files must not be symlinks") from exc
+                raise
+        finally:
+            os.close(profile_fd)
         events: list[dict[str, Any]] = []
-        for line_number, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        with os.fdopen(fd, "r", encoding="utf-8") as handle:
+            lines = handle.read().splitlines()
+        for line_number, raw in enumerate(lines, start=1):
             if not raw.strip():
                 continue
             try:
@@ -130,30 +185,40 @@ class LocalFileBackend(StateBackend):
     def _event_ledger_text(self, events: Sequence[Mapping[str, Any]]) -> str:
         return "".join(f"{_canonical_json(event)}\n" for event in events)
 
-    def _atomic_write_state(self, path: Path, state: Mapping[str, Any]) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    def _atomic_write_state(self, profile_fd: int, state: Mapping[str, Any]) -> None:
         payload = f"{json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True)}\n"
-        fd, tmp_name = tempfile.mkstemp(prefix=".state-", suffix=".tmp", dir=path.parent, text=True)
+        tmp_name = f".state-{uuid.uuid4().hex}.tmp"
+        fd = os.open(tmp_name, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600, dir_fd=profile_fd)
         try:
             os.fchmod(fd, 0o600)
             with os.fdopen(fd, "w", encoding="utf-8") as handle:
                 handle.write(payload)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(tmp_name, path)
-            os.chmod(path, 0o600)
+            os.replace(tmp_name, "state.json", src_dir_fd=profile_fd, dst_dir_fd=profile_fd)
         finally:
-            if os.path.exists(tmp_name):
-                os.unlink(tmp_name)
+            try:
+                os.unlink(tmp_name, dir_fd=profile_fd)
+            except FileNotFoundError:
+                pass
 
     def read_current_state(self, profile_id: str) -> Mapping[str, Any] | None:
-        path = self._state_path(profile_id)
-        if not path.exists():
+        self._require_dir_fd_support()
+        try:
+            profile_fd = self._open_profile_dir(profile_id)
+        except FileNotFoundError:
             return None
         try:
-            state = json.loads(path.read_text(encoding="utf-8"))
+            try:
+                fd = os.open("state.json", os.O_RDONLY | os.O_NOFOLLOW, dir_fd=profile_fd)
+            except FileNotFoundError:
+                return None
+            with os.fdopen(fd, "r", encoding="utf-8") as handle:
+                state = json.load(handle)
         except (OSError, json.JSONDecodeError) as exc:
             raise StateUnavailableError("local state projection is unreadable") from exc
+        finally:
+            os.close(profile_fd)
         events = self._read_events(profile_id)
         expected_hash = _sha256_text(self._event_ledger_text(events))
         observed_hash = state.get("source", {}).get("content_hash") if isinstance(state, dict) else None
@@ -162,6 +227,7 @@ class LocalFileBackend(StateBackend):
         return state
 
     def append_learning_event(self, profile_id: str, event: Mapping[str, Any]) -> str:
+        self._require_dir_fd_support()
         _validate_profile_id(profile_id)
         event_id = event.get("event_id")
         if not isinstance(event_id, str) or not event_id.strip():
@@ -179,19 +245,25 @@ class LocalFileBackend(StateBackend):
             raise BackendConflictError(f"event_id {event_id!r} already exists with different content")
         validate_learning_event(event, prior_events=events)
 
-        path = self._events_path(profile_id)
-        path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-        fd = os.open(path, os.O_CREAT | os.O_APPEND | os.O_WRONLY, 0o600)
+        profile_fd = self._open_profile_dir(profile_id, create=True)
         try:
+            fd = os.open(
+                "events.jsonl",
+                os.O_CREAT | os.O_APPEND | os.O_WRONLY | os.O_NOFOLLOW,
+                0o600,
+                dir_fd=profile_fd,
+            )
             with os.fdopen(fd, "a", encoding="utf-8") as handle:
+                os.fchmod(handle.fileno(), 0o600)
                 handle.write(canonical + "\n")
                 handle.flush()
                 os.fsync(handle.fileno())
         finally:
-            os.chmod(path, 0o600)
+            os.close(profile_fd)
         return event_id
 
     def refresh_projection(self, profile_id: str) -> Mapping[str, Any]:
+        self._require_dir_fd_support()
         events = self._read_events(profile_id)
 
         event_positions: dict[str, int] = {}
@@ -385,7 +457,11 @@ class LocalFileBackend(StateBackend):
                 "content_hash": content_hash,
             },
         }
-        self._atomic_write_state(self._state_path(profile_id), state)
+        profile_fd = self._open_profile_dir(profile_id, create=True)
+        try:
+            self._atomic_write_state(profile_fd, state)
+        finally:
+            os.close(profile_fd)
         return state
 
     def resolve_reassessment(
@@ -455,7 +531,13 @@ class LocalFileBackend(StateBackend):
     def export_profile(self, profile_id: str) -> str:
         """Return a deterministic privacy-scoped export without mutating state."""
 
-        profile = self._validate_profile_storage(profile_id)
+        self._require_dir_fd_support()
+        try:
+            profile_fd = self._open_profile_dir(profile_id)
+        except FileNotFoundError:
+            profile_fd = None
+        if profile_fd is not None:
+            os.close(profile_fd)
         events = self._read_events(profile_id)
         state = self.read_current_state(profile_id)
         if state is None and events:
@@ -466,27 +548,66 @@ class LocalFileBackend(StateBackend):
             "events": events,
             "state": state,
         }
-        # Accessing the path is intentional even for an empty profile: it applies
-        # the same symlink/path validation as destructive controls.
-        _ = profile
         return _canonical_json(payload) + "\n"
 
     def delete_profile(self, profile_id: str) -> bool:
         """Delete only recognized files for one profile, refusing surprises."""
 
-        profile = self._validate_profile_storage(profile_id)
-        if not profile.exists():
+        self._require_dir_fd_support()
+        try:
+            profile_fd, profiles_fd = self._open_profile_dir(profile_id, with_parent=True)
+        except FileNotFoundError:
             return False
+        profile_id = _validate_profile_id(profile_id)
         allowed = {"events.jsonl", "state.json"}
-        children = tuple(profile.iterdir())
-        unknown = [child.name for child in children if child.name not in allowed or not child.is_file()]
-        if unknown:
-            raise BackendConflictError(
-                "refusing to delete profile with unrecognized files: " + ", ".join(sorted(unknown))
-            )
-        for child in children:
-            child.unlink()
-        profile.rmdir()
+        try:
+            opened = os.fstat(profile_fd)
+            current = os.stat(profile_id, dir_fd=profiles_fd, follow_symlinks=False)
+            if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+                raise BackendConflictError("profile directory changed during deletion")
+            children = os.listdir(profile_fd)
+            unknown = []
+            for name in children:
+                info = os.stat(name, dir_fd=profile_fd, follow_symlinks=False)
+                if name not in allowed or not stat.S_ISREG(info.st_mode):
+                    unknown.append(name)
+            if unknown:
+                raise BackendConflictError(
+                    "refusing to delete profile with unrecognized files: " + ", ".join(sorted(unknown))
+                )
+            try:
+                current = os.stat(profile_id, dir_fd=profiles_fd, follow_symlinks=False)
+            except FileNotFoundError as exc:
+                raise BackendConflictError("profile directory changed during deletion") from exc
+            if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+                raise BackendConflictError("profile directory changed during deletion")
+            for name in children:
+                os.unlink(name, dir_fd=profile_fd)
+            try:
+                current = os.stat(profile_id, dir_fd=profiles_fd, follow_symlinks=False)
+            except FileNotFoundError as exc:
+                raise BackendConflictError("profile directory changed during deletion") from exc
+            if (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino):
+                raise BackendConflictError("profile directory changed during deletion")
+            # Atomically capture the directory entry, then verify what was
+            # captured before removing it. A name-based rmdir after a stat
+            # check could otherwise remove a replacement directory.
+            quarantine = f".delete-{uuid.uuid4().hex}"
+            try:
+                os.rename(profile_id, quarantine, src_dir_fd=profiles_fd, dst_dir_fd=profiles_fd)
+            except FileNotFoundError as exc:
+                raise BackendConflictError("profile directory changed during deletion") from exc
+            captured = os.stat(quarantine, dir_fd=profiles_fd, follow_symlinks=False)
+            if (opened.st_dev, opened.st_ino) != (captured.st_dev, captured.st_ino):
+                try:
+                    os.rename(quarantine, profile_id, src_dir_fd=profiles_fd, dst_dir_fd=profiles_fd)
+                except OSError:
+                    pass
+                raise BackendConflictError("profile directory changed during deletion")
+            os.rmdir(quarantine, dir_fd=profiles_fd)
+        finally:
+            os.close(profile_fd)
+            os.close(profiles_fd)
         return True
 
     def reset_profile(self, profile_id: str) -> Mapping[str, Any]:

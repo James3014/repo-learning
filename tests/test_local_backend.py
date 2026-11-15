@@ -225,3 +225,39 @@ def test_naive_observed_at_is_treated_as_utc(tmp_path):
 
     state = backend.refresh_projection("james")
     assert state["concepts"]["single owner"]["last_event_id"] == "ev-offset"
+
+
+def test_dir_fd_support_does_not_require_chmod_follow_symlinks(monkeypatch):
+    import os
+
+    from repolearn import backends
+
+    monkeypatch.setattr(os, "supports_follow_symlinks", {os.stat})
+    assert os.chmod not in os.supports_follow_symlinks
+    assert backends._has_safe_dir_fd_support() is True
+
+
+def test_events_file_mode_is_0600_even_with_open_umask(tmp_path):
+    import os
+
+    old = os.umask(0)
+    try:
+        backend = LocalFileBackend(tmp_path)
+        backend.append_learning_event("james", event())
+        backend.append_learning_event("james", event("ev-2"))
+    finally:
+        os.umask(old)
+    assert (tmp_path / "profiles" / "james" / "events.jsonl").stat().st_mode & 0o777 == 0o600
+
+
+def test_append_tightens_preexisting_wide_events_file_to_0600(tmp_path):
+    import os
+
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event())
+    events_path = tmp_path / "profiles" / "james" / "events.jsonl"
+    os.chmod(events_path, 0o666)
+
+    backend.append_learning_event("james", event("ev-2"))
+
+    assert events_path.stat().st_mode & 0o777 == 0o600
