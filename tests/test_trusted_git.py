@@ -214,6 +214,27 @@ def test_git_is_revalidated_after_execution(monkeypatch):
         helper._git(path, ["--version"], info, digest)
 
 
+def test_git_fails_closed_when_metadata_changes_during_run(tmp_path, monkeypatch, capsys):
+    _repo(tmp_path)
+    helper = _load_helper()
+    monkeypatch.chdir(tmp_path)
+    path, _, info, digest = helper._select()
+    real_run = subprocess.run
+
+    def change_metadata_after_git(args, **kwargs):
+        result = real_run(args, **kwargs)
+        if args[1:2] == ["--version"]:
+            description = tmp_path / ".git/description"
+            description.write_text(description.read_text() + "changed\n")
+        return result
+
+    monkeypatch.setattr(helper.subprocess, "run", change_metadata_after_git)
+    with pytest.raises(SystemExit) as exc:
+        helper._git(path, ["--version"], info, digest)
+    assert exc.value.code == 127
+    assert "metadata changed while Git was running" in capsys.readouterr().err
+
+
 @pytest.mark.parametrize("relative", [
     "objects/info/alternates", "refs/replace/unsafe", "info/attributes",
     "info/exclude", "shallow", "info/grafts", "packed-refs", "config.worktree",

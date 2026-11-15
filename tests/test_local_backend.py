@@ -248,3 +248,16 @@ def test_events_file_mode_is_0600_even_with_open_umask(tmp_path):
     finally:
         os.umask(old)
     assert (tmp_path / "profiles" / "james" / "events.jsonl").stat().st_mode & 0o777 == 0o600
+
+
+def test_append_tightens_preexisting_wide_events_file_to_0600(tmp_path):
+    import os
+
+    backend = LocalFileBackend(tmp_path)
+    backend.append_learning_event("james", event())
+    events_path = tmp_path / "profiles" / "james" / "events.jsonl"
+    os.chmod(events_path, 0o666)
+
+    backend.append_learning_event("james", event("ev-2"))
+
+    assert events_path.stat().st_mode & 0o777 == 0o600
