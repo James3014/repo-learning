@@ -47,7 +47,7 @@ class ReadOnlyCanonicalBackendError(RuntimeError):
 
 _LEVEL_ORDER = {"UNASSESSED": -1, "L0": 0, "L1": 1, "L2": 2, "L3": 3, "L4": 4}
 _SAFE_PROFILE = re.compile(r"^[A-Za-z0-9._-]+$")
-_DIR_FD_REQUIRED = (os.open, os.mkdir, os.stat, os.chmod, os.unlink, os.rmdir, os.rename)
+_DIR_FD_REQUIRED = (os.open, os.mkdir, os.stat, os.unlink, os.rmdir, os.rename)
 
 
 def _has_safe_dir_fd_support() -> bool:
@@ -57,7 +57,6 @@ def _has_safe_dir_fd_support() -> bool:
         and all(operation in os.supports_dir_fd for operation in _DIR_FD_REQUIRED)
         and {"src_dir_fd", "dst_dir_fd"}.issubset(inspect.signature(os.replace).parameters)
         and os.stat in os.supports_follow_symlinks
-        and os.chmod in os.supports_follow_symlinks
         and os.listdir in os.supports_fd
     )
 
@@ -197,7 +196,6 @@ class LocalFileBackend(StateBackend):
                 handle.flush()
                 os.fsync(handle.fileno())
             os.replace(tmp_name, "state.json", src_dir_fd=profile_fd, dst_dir_fd=profile_fd)
-            os.chmod("state.json", 0o600, dir_fd=profile_fd, follow_symlinks=False)
         finally:
             try:
                 os.unlink(tmp_name, dir_fd=profile_fd)
@@ -256,10 +254,10 @@ class LocalFileBackend(StateBackend):
                 dir_fd=profile_fd,
             )
             with os.fdopen(fd, "a", encoding="utf-8") as handle:
+                os.fchmod(handle.fileno(), 0o600)
                 handle.write(canonical + "\n")
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.chmod("events.jsonl", 0o600, dir_fd=profile_fd, follow_symlinks=False)
         finally:
             os.close(profile_fd)
         return event_id

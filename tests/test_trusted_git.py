@@ -347,7 +347,7 @@ def test_git_uses_config_overrides_and_config_inspection(monkeypatch):
     assert dict(pairs)["core.askPass"] == ""
     assert dict(pairs)["diff.external"] == ""
     assert dict(pairs)["credential.helper"] == ""
-    assert any("--show-origin" in args and "--list" in args for args, _ in seen)
+    assert any("--show-origin" in args and "--show-scope" in args and "--list" in args for args, _ in seen)
 
 
 @pytest.mark.parametrize("scope_env", ["GIT_CONFIG_SYSTEM", "GIT_CONFIG_GLOBAL"])
@@ -392,3 +392,51 @@ def test_git_rejects_valueless_execution_capable_config(tmp_path, monkeypatch, c
     path, _, info, digest = helper._select()
     with pytest.raises(SystemExit):
         helper._git(path, ["diff", "--cached", "--check", "HEAD"], info, digest)
+
+
+LFS_CONFIG = (
+    '[filter "lfs"]\n\tclean = git-lfs clean -- %f\n\tsmudge = git-lfs smudge -- %f\n'
+    "\tprocess = git-lfs filter-process\n\trequired = true\n"
+)
+
+
+def _diff_check(tmp_path, monkeypatch):
+    helper = _load_helper()
+    monkeypatch.chdir(tmp_path)
+    path, _, info, digest = helper._select()
+    helper._git(path, ["diff", "--cached", "--check", "HEAD"], info, digest)
+
+
+@pytest.mark.parametrize("scope_env", ["GIT_CONFIG_SYSTEM", "GIT_CONFIG_GLOBAL"])
+def test_standard_lfs_filters_allowed_at_system_and_global_scope(tmp_path, monkeypatch, scope_env):
+    _repo(tmp_path)
+    config = tmp_path / "outer.config"
+    config.write_text(LFS_CONFIG)
+    monkeypatch.setenv(scope_env, str(config))
+    _diff_check(tmp_path, monkeypatch)
+
+
+def test_modified_lfs_value_at_system_scope_fails(tmp_path, monkeypatch):
+    _repo(tmp_path)
+    config = tmp_path / "outer.config"
+    config.write_text(LFS_CONFIG.replace("git-lfs clean -- %f", "git-lfs clean --evil %f"))
+    monkeypatch.setenv("GIT_CONFIG_SYSTEM", str(config))
+    with pytest.raises(SystemExit):
+        _diff_check(tmp_path, monkeypatch)
+
+
+def test_local_scope_lfs_filter_fails(tmp_path, monkeypatch):
+    _repo(tmp_path)
+    with (tmp_path / ".git/config").open("a") as config:
+        config.write("\n" + LFS_CONFIG)
+    with pytest.raises(SystemExit):
+        _diff_check(tmp_path, monkeypatch)
+
+
+def test_extra_system_filter_fails_alongside_lfs(tmp_path, monkeypatch):
+    _repo(tmp_path)
+    config = tmp_path / "outer.config"
+    config.write_text(LFS_CONFIG + '[filter "foo"]\n\tclean = foo\n')
+    monkeypatch.setenv("GIT_CONFIG_SYSTEM", str(config))
+    with pytest.raises(SystemExit):
+        _diff_check(tmp_path, monkeypatch)

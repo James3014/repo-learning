@@ -234,6 +234,15 @@ def _repo_snapshot(git: str) -> tuple[list[tuple[str, os.stat_result]], Path]:
     return snapshot, gitdir
 
 
+# Standard git-lfs filter values; accepted only from system/global scope (attributes are disabled for the diff, so no filter runs).
+LFS_FILTER_VALUES = {
+    "filter.lfs.clean": "git-lfs clean -- %f",
+    "filter.lfs.smudge": "git-lfs smudge -- %f",
+    "filter.lfs.process": "git-lfs filter-process",
+    "filter.lfs.required": "true",
+}
+
+
 def _check_config(git: str) -> None:
     env = _git_env(audit=True)
     count = len(SAFE_CONFIG)
@@ -241,12 +250,21 @@ def _check_config(git: str) -> None:
         env.pop(f"GIT_CONFIG_KEY_{i}", None)
         env.pop(f"GIT_CONFIG_VALUE_{i}", None)
     env.pop("GIT_CONFIG_COUNT", None)
-    result = subprocess.run([git, "config", "--null", "--show-origin", "--list"], cwd=Path.cwd(), env=env, capture_output=True, check=False)
+    result = subprocess.run([git, "config", "--null", "--show-scope", "--show-origin", "--list"], cwd=Path.cwd(), env=env, capture_output=True, check=False)
     if result.returncode:
         _fail("cannot inspect Git config from all scopes")
-    for record in result.stdout.decode("utf-8", "replace").split("\0"):
-        # --null emits "origin\0key\nvalue\0"; a valueless key has no newline, so take the text before it.
-        key = record.split("\n", 1)[0].lower()
+    # --null --show-scope --show-origin emits "scope\0origin\0key\nvalue\0" per entry; a valueless key has no newline.
+    tokens = result.stdout.decode("utf-8", "replace").split("\0")
+    if tokens and tokens[-1] == "":
+        tokens.pop()
+    if len(tokens) % 3:
+        _fail("cannot parse Git config from all scopes")
+    for i in range(0, len(tokens), 3):
+        scope, record = tokens[i], tokens[i + 2]
+        name, has_value, value = record.partition("\n")
+        key = name.lower()
+        if scope in {"system", "global"} and has_value and LFS_FILTER_VALUES.get(key) == value:
+            continue
         if key.startswith("filter.") or (key.startswith("diff.") and key.endswith((".command", ".textconv"))) or key in {
             "core.fsmonitor", "core.hookspath", "include.path", "extensions.worktreeconfig",
         } or key.startswith("includeif."):
